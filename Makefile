@@ -1,6 +1,6 @@
 
 CC=gcc
-CFLAGS=-O3 -D_BIN_TRANSLATION_ -D__RCDAEMON__
+CFLAGS=-O3 -D_BIN_TRANSLATION_ -D__RCDAEMON__ -Wall -Wextra
 LDFLAGS=-static -pthread
 
 all: bin-translator
