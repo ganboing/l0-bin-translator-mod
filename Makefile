@@ -6,4 +6,4 @@ LDFLAGS=-static -pthread
 all: bin-translator
 
 bin-translator:
-	$(CC) $(CFLAGS) $(LDFLAGS) -c bin_translator.c -o bin_translator.o
+	$(CC) $(CFLAGS) $(LDFLAGS) -c bin_translator.c -o vpc_objects/bin_translator.o
