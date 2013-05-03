@@ -8172,7 +8172,7 @@ uint64_t _sys_indirect_jump_handler(char *target)
 
 uint64_t run_i0_code(uint64_t fi)
 {
-	printf("preparing to run i0 code @ addr: 0x%lx\n",fi);
+	zlogf("preparing to run i0 code @ addr: 0x%lx\n",fi);
 	PrintPBlockMeta();
     uint64_t result = 0;
     uint64_t native_fi = 0;
