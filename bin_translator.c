@@ -7838,7 +7838,7 @@ void PrintPBlockMeta(void)
 		ModLog(	"┌───────_pblockmeta──────────\n"
 				"├──next_native == 0x%lx\n"
 				"├──next_trampoline == 0x%lx\n"
-				"├──jump table number == %ul",
+				"├──jump table number == %lu",
 				_pblockmeta->next_native,
 				_pblockmeta->next_trampoline,
 				_pblockmeta->num);
@@ -7849,7 +7849,7 @@ void PrintPBlockMeta(void)
 					_pblockmeta->blocks[i].i0,
 					_pblockmeta->blocks[i].native);
 		}
-		ModLog( "└──────────────────────────\n");
+		ModLog( "\n└──────────────────────────\n");
 	}
 }
 
@@ -8173,7 +8173,7 @@ uint64_t _sys_indirect_jump_handler(char *target)
 
 uint64_t run_i0_code(uint64_t fi)
 {
-	ModLog("this is a test!\n");
+	//ModLog("this is a test!\n");
 	ModLog("preparing to run i0 code @ addr: 0x%lx\n",fi);
 	PrintPBlockMeta();
     uint64_t result = 0;
