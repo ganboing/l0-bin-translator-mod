@@ -29,3 +29,11 @@ void FinalModLog(void)
 {
 	fclose(debug_log);
 }
+
+int main(int argc, char** argv)
+{
+	(void)argc;
+	(void)argv;
+	ModLog("this is a test message!\n");
+	return 0;
+}
