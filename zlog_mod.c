@@ -4,7 +4,7 @@
 void InitModLog(void) __attribute__((constructor));
 void FinalModLog(void) __attribute__((destructor));
 
-FILE* debug_log = NULL;
+static FILE* debug_log = NULL;
 
 void ModLog(const char* fmt, ...)
 {

@@ -29,6 +29,7 @@
 #include "bin_translator.h"
 #include "vpc_perf_counter.h"
 #include "zlog.h"
+#include "zlog_mod.h"
 
 #include "profiling_entries.h"
 
@@ -7834,7 +7835,7 @@ void PrintPBlockMeta(void)
 	uint64_t i;
 	if(_pblockmeta!=NULL)
 	{
-		printf(	"┌───────_pblockmeta──────────\n"
+		ModLog(	"┌───────_pblockmeta──────────\n"
 				"├──next_native == 0x%lx\n"
 				"├──next_trampoline == 0x%lx\n"
 				"├──jump table number == %ul",
@@ -7848,7 +7849,7 @@ void PrintPBlockMeta(void)
 					_pblockmeta->blocks[i].i0,
 					_pblockmeta->blocks[i].native);
 		}
-		printf( "└──────────────────────────\n");
+		ModLog( "└──────────────────────────\n");
 	}
 }
 
@@ -8172,7 +8173,7 @@ uint64_t _sys_indirect_jump_handler(char *target)
 
 uint64_t run_i0_code(uint64_t fi)
 {
-	zlogf("preparing to run i0 code @ addr: 0x%lx\n",fi);
+	ModLog("preparing to run i0 code @ addr: 0x%lx\n",fi);
 	PrintPBlockMeta();
     uint64_t result = 0;
     uint64_t native_fi = 0;
