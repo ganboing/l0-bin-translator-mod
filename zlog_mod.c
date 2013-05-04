@@ -1,11 +1,5 @@
 #include <stdio.h>
 #include <stdarg.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <string.h>
-#include <time.h>
-#include <pthread.h>
 
 void InitModLog(void) __attribute__((constructor));
 void FinalModLog(void) __attribute__((destructor));
