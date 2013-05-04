@@ -10,7 +10,7 @@ void ModLog(const char* fmt, ...)
 {
 	va_list va;
 	va_start(va, fmt);
-	fprintf(debug_log,fmt,va);
+	vfprintf(debug_log,fmt,va);
 	fflush(debug_log);
 	va_end(va);
 }
