@@ -7,6 +7,9 @@
 #include <time.h>
 #include <pthread.h>
 
+void InitModLog(void) __attribute__((constructor));
+void FinalModLog(void) __attribute__((destructor));
+
 FILE* debug_log = NULL;
 
 void ModLog(const char* fmt, ...)
@@ -17,12 +20,12 @@ void ModLog(const char* fmt, ...)
 	va_end(va);
 }
 
-void InitModLog(void) __attribute__((constructor))
+void InitModLog(void)
 {
 	debug_log=fopen("//lhome//bgan//l0log//bintran_debug.log","a+");
 }
 
-void FinalModLog(void) __attribute__((destructor))
+void FinalModLog(void)
 {
 	fclose(debug_log);
 }
