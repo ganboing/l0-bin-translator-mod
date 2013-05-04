@@ -7838,7 +7838,7 @@ void PrintPBlockMeta(void)
 		ModLog(	"┌───────_pblockmeta──────────\n"
 				"├──next_native == 0x%lx\n"
 				"├──next_trampoline == 0x%lx\n"
-				"├──jump table number == %lu",
+				"├──jump table number == %lu\n",
 				_pblockmeta->next_native,
 				_pblockmeta->next_trampoline,
 				_pblockmeta->num);
@@ -7849,7 +7849,7 @@ void PrintPBlockMeta(void)
 					_pblockmeta->blocks[i].i0,
 					_pblockmeta->blocks[i].native);
 		}
-		ModLog( "\n└──────────────────────────\n");
+		ModLog( "└──────────────────────────\n");
 	}
 }
 
