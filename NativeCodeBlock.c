@@ -44,7 +44,10 @@ inline void __SwapMkr(NativeCodeModEntry* x, NativeCodeModEntry* y) {
 	}
 }
 
-#define __QuickSort_Prototype(TYPE,PTR,N) \
+#define __QuickSort_Prototype(TYPE) \
+void __QuickSort_Type_##TYPE ( TYPE * , int32_t )
+
+#define __QuickSort(TYPE,PTR,N) \
 __QuickSort_Type_##TYPE (PTR,N)
 
 #define __QuickSort_Define(TYPE,KEYTYPE,KEYNAME,SWAPFUNC) \
@@ -90,12 +93,14 @@ void __QuickSort_Type_##TYPE ( TYPE *list , int32_t n ) {\
 	}\
 }
 
+__QuickSort_Prototype(NativeCodeModEntry);
+
 __QuickSort_Define(NativeCodeModEntry,uint64_t,spc,__SwapMkr)
 
 
 
 void SortMarkerList(NativeCodeModEntryList* _list) {
-	__QuickSort_Prototype(NativeCodeModEntry,_list->Head, _list->EffecSize);
+	__QuickSort(NativeCodeModEntry,_list->Head, _list->EffecSize);
 }
 
 void InsertMarkList(NativeCodeModEntryList* list, uint64_t _spc, int32_t _offset, uint32_t _flags)
