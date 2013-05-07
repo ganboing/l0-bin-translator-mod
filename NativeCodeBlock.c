@@ -1,4 +1,6 @@
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 typedef struct _NativeCodeModEntry {
 	uint64_t spc;
