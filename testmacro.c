@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #define __QuickSort_Define(TYPE,KEYTYPE,KEYNAME,SWAPFUNC) \
 void __QuicKSort_Type_##TYPE ( TYPE *list , uint32_t n ) {\
 	if (n > 1) { \
