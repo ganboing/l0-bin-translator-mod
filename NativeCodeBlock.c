@@ -46,7 +46,7 @@ inline void __SwapMkr(NativeCodeModEntry* x, NativeCodeModEntry* y) {
 __QuickSort_Type_##TYPE (PTR,N)
 
 #define __QuickSort_Define(TYPE,KEYTYPE,KEYNAME,SWAPFUNC) \
-void __QuicKSort_Type_##TYPE ( TYPE *list , uint32_t n ) {\
+void __QuicKSort_Type_##TYPE ( TYPE *list , int32_t n ) {\
 	if (n > 1) { \
 		int32_t i; \
 		int32_t pos = rand(); \
