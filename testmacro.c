@@ -1,5 +1,5 @@
 #define __QuickSort_Define(TYPE,KEYTYPE,KEYNAME,SWAPFUNC) \
-void __QuicKSort_Type_ TYPE ( TYPE * list , uint32_t n ) {\
+void __QuicKSort_Type_##TYPE ( TYPE *list , uint32_t n ) {\
 	if (n > 1) { \
 		int32_t i; \
 		int32_t pos = rand(); \
@@ -36,8 +36,8 @@ void __QuicKSort_Type_ TYPE ( TYPE * list , uint32_t n ) {\
 			else {\
 				for (i = ge; i < n; i++) {\
 					SWAPFUNC(list + i, list + n + l - 1 - i); }}\
-			__QuicKSort_Type_##TYPE##(list, l - le); \
-			__QuicKSort_Type_##TYPE##(list - ge + l, ge - l); \
+			__QuicKSort_Type_##TYPE (list, l - le); \
+			__QuicKSort_Type_##TYPE (list - ge + l, ge - l); \
 		} \
 	}\
 }
