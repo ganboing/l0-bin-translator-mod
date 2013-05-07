@@ -88,8 +88,8 @@ void __QuickSort_Type_##TYPE( TYPE *list , int32_t n ) {\
 		else {\
 			for (i = ge; i < n; i++) {\
 				SWAPFUNC(list + i, list + n + l - 1 - i); }}\
-		__QuicKSort_Type_##TYPE (list, l - le); \
-		__QuicKSort_Type_##TYPE (list - ge + l, ge - l); \
+		__QuickSort(TYPE,list, l - le); \
+		__QuickSort(TYPE,list - ge + l, ge - l); \
 	}\
 }
 
