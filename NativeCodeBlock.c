@@ -45,13 +45,13 @@ inline void __SwapMkr(NativeCodeModEntry* x, NativeCodeModEntry* y) {
 }
 
 #define __QuickSort_Prototype(TYPE) \
-void __QuickSort_Type_##TYPE ( TYPE * , int32_t )
+void __QuickSort_Type_##TYPE( TYPE * , int32_t )
 
 #define __QuickSort(TYPE,PTR,N) \
-__QuickSort_Type_##TYPE (PTR,N)
+__QuickSort_Type_##TYPE(PTR,N)
 
 #define __QuickSort_Define(TYPE,KEYTYPE,KEYNAME,SWAPFUNC) \
-void __QuickSort_Type_##TYPE ( TYPE *list , int32_t n ) {\
+void __QuickSort_Type_##TYPE( TYPE *list , int32_t n ) {\
 	if (n > 1) { \
 		int32_t i; \
 		int32_t pos = rand(); \
