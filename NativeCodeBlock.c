@@ -98,7 +98,7 @@ void SortMarkerList(NativeCodeModEntryList* _list) {
 
 void InsertMarkList(NativeCodeModEntryList* list, uint64_t _spc, int32_t _offset, uint32_t _flags)
 {
-	if(list->AllocSize==list->EffecSize)
+	if((list->AllocSize)==(list->EffecSize))
 	{
 		list->Head = realloc(list->Head , AllocSize * 2 * sizeof(NativeCodeModEntry));
 	}
