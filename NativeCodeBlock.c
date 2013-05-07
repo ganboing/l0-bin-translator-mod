@@ -38,7 +38,7 @@ inline void __SwapMkr(NativeCodeModEntry* x, NativeCodeModEntry* y) {
 		NativeCodeModEntry tmp;
 		tmp = *x;
 		*x = *y;
-		y = tmp;
+		*y = tmp;
 	}
 }
 
@@ -114,5 +114,5 @@ void InsertNCBAvl(NativeCodeBlockDesc* newblock)
 	NCBAvlNode* newnode = (NCBAvlNode*)malloc(sizeof(NCBAvlNode));
 	newnode->NCBPtr = newblock;
 	newblock->Prt2AvlNode = newnode;
-	__AvlInsert;
+	//__AvlInsert;
 }
