@@ -100,11 +100,11 @@ void InsertMarkList(NativeCodeModEntryList* list, uint64_t _spc, int32_t _offset
 {
 	if((list->AllocSize)==(list->EffecSize))
 	{
-		list->Head = realloc(list->Head , AllocSize * 2 * sizeof(NativeCodeModEntry));
+		list->Head = realloc(list->Head , list->AllocSize * 2 * sizeof(NativeCodeModEntry));
 	}
-	list->Head[EffecSize].spc = _spc;
-	list->Head[EffecSize].offset = _offset;
-	list->Head[EffecSize].flags = _flags;
+	list->Head[list->EffecSize].spc = _spc;
+	list->Head[list->EffecSize].offset = _offset;
+	list->Head[list->EffecSize].flags = _flags;
 	list->EffecSize++;
 }
 
