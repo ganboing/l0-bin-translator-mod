@@ -71,21 +71,20 @@ void __QuicKSort_Type_##TYPE ( TYPE *list , uint32_t n ) {\
 				} \
 				SWAPFUNC(list + l, list + g); \
 			} \
-			if (2 * le > l) {\
-				for (i = le; i < l; i++) {\
-					SWAPFUNC(list + i, list + l - 1 - i); }}\
-			else {\
-				for (i = 0; i < le; i++) {\
-					SWAPFUNC(list + i, list + l - 1 - i); }}\
-			if (2 * ge < (n + l)) {\
-				for (i = l; i < ge;  i++) {\
-					SWAPFUNC(list + i, list + n + l - 1 - i); }}\
-			else {\
-				for (i = ge; i < n; i++) {\
-					SWAPFUNC(list + i, list + n + l - 1 - i); }}\
-			__QuicKSort_Type_##TYPE (list, l - le); \
-			__QuicKSort_Type_##TYPE (list - ge + l, ge - l); \
-		} \
+		if (2 * le > l) {\
+			for (i = le; i < l; i++) {\
+				SWAPFUNC(list + i, list + l - 1 - i); }}\
+		else {\
+			for (i = 0; i < le; i++) {\
+				SWAPFUNC(list + i, list + l - 1 - i); }}\
+		if (2 * ge < (n + l)) {\
+			for (i = l; i < ge;  i++) {\
+				SWAPFUNC(list + i, list + n + l - 1 - i); }}\
+		else {\
+			for (i = ge; i < n; i++) {\
+				SWAPFUNC(list + i, list + n + l - 1 - i); }}\
+		__QuicKSort_Type_##TYPE (list, l - le); \
+		__QuicKSort_Type_##TYPE (list - ge + l, ge - l); \
 	}\
 }
 
