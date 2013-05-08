@@ -123,16 +123,6 @@ void InsertNCBAvl(NativeCodeBlockDesc* newblock)
 	//__AvlInsert;
 }
 
-void _delete_tree(Tree_Node* _root) {
-		if (_root != terminator) {
-			_delete_tree(_root->left);
-			_delete_tree(_root->right);
-			delete _root;
-		}
-	}
-
-#define Tree_Node int
-
 #define __AvlTreeFindExact(NODETYPE,ROOT,KEY) \
 __AvlTreeFindExact_Type_##NODETYPE( ROOT, KEY)
 
