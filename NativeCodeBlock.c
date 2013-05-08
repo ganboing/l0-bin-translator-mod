@@ -44,11 +44,11 @@ inline void __SwapMkr(NativeCodeModEntry* x, NativeCodeModEntry* y) {
 	}
 }
 
-#define __QuickSort_Prototype(TYPE) \
-void __QuickSort_Type_##TYPE( TYPE * , int32_t )
-
 #define __QuickSort(TYPE,PTR,N) \
 __QuickSort_Type_##TYPE(PTR,N)
+
+#define __QuickSort_Prototype(TYPE) \
+void __QuickSort_Type_##TYPE( TYPE * , int32_t )
 
 #define __QuickSort_Define(TYPE,KEYTYPE,KEYNAME,SWAPFUNC) \
 void __QuickSort_Type_##TYPE( TYPE *list , int32_t n ) {\
@@ -95,7 +95,7 @@ void __QuickSort_Type_##TYPE( TYPE *list , int32_t n ) {\
 
 __QuickSort_Prototype(NativeCodeModEntry);
 
-__QuickSort_Define(NativeCodeModEntry,uint64_t,spc,__SwapMkr)
+__QuickSort_Define(NativeCodeModEntry,uint64_t,spc,__SwapMkr);
 
 
 
@@ -122,3 +122,54 @@ void InsertNCBAvl(NativeCodeBlockDesc* newblock)
 	newblock->Prt2AvlNode = newnode;
 	//__AvlInsert;
 }
+
+void _delete_tree(Tree_Node* _root) {
+		if (_root != terminator) {
+			_delete_tree(_root->left);
+			_delete_tree(_root->right);
+			delete _root;
+		}
+	}
+
+#define Tree_Node int
+
+#define __AvlTreeFindExact(NODETYPE,ROOT,KEY) \
+__AvlTreeFindExact_Type_##NODETYPE( ROOT, KEY)
+
+#define __AvlTreeFindExact_Prototype(NODETYPE,KEYTYPE) \
+NODETYPE** __AvlTreeFindExact_Type_##NODETYPE( NODETYPE**, KEYTYPE);
+
+#define __AvlTreeFindExact_Define(NODETYPE,KEYTYPE,DATAPTR,KEYNAME) \
+NODETYPE** __AvlTreeFindExact_Type_##NODETYPE( NODETYPE** _root, KEYTYPE _key) { \
+	while((*_root)!=NULL) { \
+		if( ((*_root) -> DATAPTR -> KEYNAME) == _key) { \
+			return _root; \
+		} \
+		else { \
+			if( ((*_root) -> DATA -> KEYNAME) < key) { \
+				_root = (&( (*root) -> right )); \
+			} \
+			else { \
+				_root = (&( (*root) -> left )); \
+			} \
+	} \
+	return _root; \
+}
+
+
+
+#define __AvlTreeInsert_Define(NODETYPE,DATATYPE,DATAPTR,KEYNAME) \
+NODETYPE* __AvlTreeInsert_Type_##NODETYPE( NODETYPE** _root, DATATYPE* _value) { \
+	NODETYPE** insertentry = __AvlTreeFindExact(NODETYPE, _root, _value -> KEYNAME); \
+	if ((*insertentry) == NULL) { \
+		(*insertentry) = (NODETYPE*)malloc(sizeof(NODETYPE)); \
+		(*insertentry) -> left = NULL; \
+		(*insertentry) -> right = NULL; \
+		(*insertentry) -> parent = NULL; \
+		(*insertentry) -> DATAPTR = _value; \
+		return (*_root); \
+	}
+
+__AvlTreeInsert_Define(_NCBAvlNode,_NativeCodeBlockDesc,NCBPtr,SourceCodeBase);
+
+
