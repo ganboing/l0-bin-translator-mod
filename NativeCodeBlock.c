@@ -140,9 +140,9 @@ void InsertNCBAvl(NativeCodeBlockDesc* newblock)
 	//__AvlInsert;
 }
 
-#define NCBAVLNODE_RIGHT_PTR_OFFSET ((int32_t)((int64_t)(&(((NCBAvlNode*)(NULL))->right))))
+#define NCBAVLNODE_RIGHT_PTR_OFFSET ((uint32_t)((int64_t)(&(((NCBAvlNode*)(NULL))->right))))
 
-#define NCBAVLNODE_LEFT_PTR_OFFSET ((int32_t)((int64_t)(&(((NCBAvlNode*)(NULL))->left))))
+#define NCBAVLNODE_LEFT_PTR_OFFSET ((uint32_t)((int64_t)(&(((NCBAvlNode*)(NULL))->left))))
 
 NCBAvlNode* InsertNCBNode(NCBAvlNode** const _root,
 		NativeCodeBlockDesc* _newblock) {
@@ -155,17 +155,17 @@ NCBAvlNode* InsertNCBNode(NCBAvlNode** const _root,
 		(*_root) = solvednode;
 		solvednode->parent = NULL;
 	} else {
-		int32_t sp = -2;
+		int64_t sp = -2;
 		NCBAvlNode* origroot = (*_root);
 		NCBAvlNode* pendingnode = origroot;
-		int32_t ptroffset[0x40];
+		uint32_t ptroffset[0x40];
 		while (1) {
 			sp += 2;
 			if ((pendingnode->NCBPtr->SourceCodeBase)
 					< (_newblock->SourceCodeBase)) {
 				ptroffset[sp] = NCBAVLNODE_RIGHT_PTR_OFFSET;
 				ptroffset[sp + 1] = NCBAVLNODE_LEFT_PTR_OFFSET;
-				if (pendingnode->right != (&NCBAvlTerminator)) {
+				if (pendingnode->right == (&NCBAvlTerminator)) {
 					pendingnode->right = solvednode;
 					solvednode->parent = pendingnode;
 					break;
@@ -175,7 +175,7 @@ NCBAvlNode* InsertNCBNode(NCBAvlNode** const _root,
 			} else {
 				ptroffset[sp] = NCBAVLNODE_LEFT_PTR_OFFSET;
 				ptroffset[sp + 1] = NCBAVLNODE_RIGHT_PTR_OFFSET;
-				if (pendingnode->left != (&NCBAvlTerminator)) {
+				if (pendingnode->left == (&NCBAvlTerminator)) {
 					pendingnode->left = solvednode;
 					solvednode->parent = pendingnode;
 					break;
@@ -185,27 +185,27 @@ NCBAvlNode* InsertNCBNode(NCBAvlNode** const _root,
 			}
 		}
 		while (sp >= 0) {
-			NCBAvlNode* L1d = (*(NCBAvlNode**) (((void*) pendingnode)
+			NCBAvlNode* L1d = (*(NCBAvlNode**) (((uint64_t) pendingnode)
 					+ ptroffset[sp + 1]));
 			if (solvednode->height > (L1d->height + 1)) {
-				NCBAvlNode* L2d = (*(NCBAvlNode**) (((void*) solvednode)
+				NCBAvlNode* L2d = (*(NCBAvlNode**) (((uint64_t) solvednode)
 						+ ptroffset[sp + 1]));
-				NCBAvlNode* L2s = (*(NCBAvlNode**) (((void*) solvednode)
+				NCBAvlNode* L2s = (*(NCBAvlNode**) (((uint64_t) solvednode)
 						+ ptroffset[sp]));
 				if (L2d->height > L2s->height) {
 					L2d->height++;
 					solvednode->height--;
 					pendingnode->height--;
-					NCBAvlNode** L3dp = (NCBAvlNode**) (((void*) L2d)
+					NCBAvlNode** L3dp = (NCBAvlNode**) (((uint64_t) L2d)
 							+ ptroffset[sp + 1]);
-					NCBAvlNode** L3sp = (NCBAvlNode**) (((void*) L2d)
+					NCBAvlNode** L3sp = (NCBAvlNode**) (((uint64_t) L2d)
 							+ ptroffset[sp]);
-					(*((NCBAvlNode**) (((void*) pendingnode) + ptroffset[sp]))) =
+					(*((NCBAvlNode**) (((uint64_t) pendingnode) + ptroffset[sp]))) =
 							(*L3dp);
 					(*L3dp) = pendingnode;
 					L2d->parent = pendingnode->parent;
 					pendingnode->parent = L2d;
-					(*((NCBAvlNode**) (((void*) solvednode) + ptroffset[sp + 1]))) =
+					(*((NCBAvlNode**) (((uint64_t) solvednode) + ptroffset[sp + 1]))) =
 							(*L3sp);
 					(*L3sp) = solvednode;
 					solvednode->parent = L2d;
@@ -214,9 +214,9 @@ NCBAvlNode* InsertNCBNode(NCBAvlNode** const _root,
 					pendingnode->height--;
 					solvednode->parent = pendingnode->parent;
 					pendingnode->parent = solvednode;
-					(*((NCBAvlNode**) (((void*) pendingnode) + ptroffset[sp]))) =
+					(*((NCBAvlNode**) (((uint64_t) pendingnode) + ptroffset[sp]))) =
 							L2d;
-					(*((NCBAvlNode**) (((void*) solvednode) + ptroffset[sp + 1]))) =
+					(*((NCBAvlNode**) (((uint64_t) solvednode) + ptroffset[sp + 1]))) =
 							pendingnode;
 				}
 				pendingnode = solvednode->parent;
