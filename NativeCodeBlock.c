@@ -140,9 +140,9 @@ void InsertNCBAvl(NativeCodeBlockDesc* newblock)
 	//__AvlInsert;
 }
 
-#define NCBAVLNODE_RIGHT_PTR_OFFSET ((uint32_t)((uint64_t)(&(((NCBAvlNode*)(NULL))->right))))
+#define NCBAVLNODE_RIGHT_PTR_OFFSET ((int32_t)((int64_t)(&(((NCBAvlNode*)(NULL))->right))))
 
-#define NCBAVLNODE_LEFT_PTR_OFFSET ((uint32_t)((uint64_t)(&(((NCBAvlNode*)(NULL))->left))))
+#define NCBAVLNODE_LEFT_PTR_OFFSET ((int32_t)((int64_t)(&(((NCBAvlNode*)(NULL))->left))))
 
 NCBAvlNode* InsertNCBNode(NCBAvlNode** const _root,
 		NativeCodeBlockDesc* _newblock) {
@@ -158,7 +158,7 @@ NCBAvlNode* InsertNCBNode(NCBAvlNode** const _root,
 		int32_t sp = -2;
 		NCBAvlNode* origroot = (*_root);
 		NCBAvlNode* pendingnode = origroot;
-		uint32_t ptroffset[0x40];
+		int32_t ptroffset[0x40];
 		while (1) {
 			sp += 2;
 			if ((pendingnode->NCBPtr->SourceCodeBase)
