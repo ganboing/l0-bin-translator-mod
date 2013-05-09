@@ -50,7 +50,7 @@ struct _NCBAvlNode {
 	uint32_t flags;
 } ;
 
-static const NCBAvlNode NCBAvlTerminator = { NULL, NULL, NULL, NULL, 0, 0};
+static NCBAvlNode NCBAvlTerminator = { NULL, NULL, NULL, NULL, 0, 0};
 
 inline void __SwapMkr(NativeCodeModEntry* x, NativeCodeModEntry* y) {
 	if (x != y) {
