@@ -2,6 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+typedef struct _NativeCodeModEntry NativeCodeModEntry;
+
+typedef struct _NativeCodeModEntryList NativeCodeModEntryList;
+
+typedef struct _NativeCodeBlockDesc NativeCodeBlockDesc;
+
+typedef struct _NCBAvlNode NCBAvlNode;
+
 typedef struct _NativeCodeModEntry {
 	uint64_t spc;
 	int32_t offset;
@@ -18,7 +26,7 @@ typedef struct _NativeCodeModEntryList{
 typedef struct _NativeCodeBlockDesc {
 	void* NativeCodeBlock; //XXX:should be managed manually
 	void* NativeCodeEntryPoint;
-	struct NativeCodeBlockDesc** RefedBlocks;
+	NativeCodeBlockDesc** RefedBlocks;
 	NCBAvlNode* Prt2AvlNode;
 	uint32_t NativeCodeSize;
 	uint32_t SourceCodeSize;
@@ -31,9 +39,9 @@ typedef struct _NativeCodeBlockDesc {
 
 typedef struct _NCBAvlNode {
 	NativeCodeBlockDesc* NCBPtr;
-	struct _NCBAvlNode* parent;
-	struct _NCBAvlNode* left;
-	struct _NCBAvlNode* right;
+	NCBAvlNode* parent;
+	NCBAvlNode* left;
+	NCBAvlNode* right;
 	uint32_t height;
 	uint32_t flags;
 } NCBAvlNode;
@@ -128,9 +136,9 @@ void InsertNCBAvl(NativeCodeBlockDesc* newblock)
 	//__AvlInsert;
 }
 
-#define NCBAVLNODE_RIGHT_PTR_OFFSET (((uint8_t)(&(((NCBAvlNode*)(NULL))->right))))
+#define NCBAVLNODE_RIGHT_PTR_OFFSET (((uint32_t)(&(((NCBAvlNode*)(NULL))->right))))
 
-#define NCBAVLNODE_LEFT_PTR_OFFSET (((uint8_t)(&(((NCBAvlNode*)(NULL))->left))))
+#define NCBAVLNODE_LEFT_PTR_OFFSET (((uint32_t)(&(((NCBAvlNode*)(NULL))->left))))
 
 NCBAvlNode* InsertNCBNode(NCBAvlNode** const _root,
 		NativeCodeBlockDesc* _newblock) {
@@ -146,7 +154,7 @@ NCBAvlNode* InsertNCBNode(NCBAvlNode** const _root,
 		int32_t sp = -2;
 		NCBAvlNode* origroot = (*_root);
 		NCBAvlNode* pendingnode = origroot;
-		uint8_t ptroffset[0x40];
+		uint32_t ptroffset[0x40];
 		while (1) {
 			sp += 2;
 			if ((pendingnode->NCBPtr->SourceCodeBase)
