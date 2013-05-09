@@ -140,9 +140,9 @@ void InsertNCBAvl(NativeCodeBlockDesc* newblock)
 	//__AvlInsert;
 }
 
-#define NCBAVLNODE_RIGHT_PTR_OFFSET (((uint32_t)(&(((NCBAvlNode*)(NULL))->right))))
+#define NCBAVLNODE_RIGHT_PTR_OFFSET ((uint32_t)((uint64_t)(&(((NCBAvlNode*)(NULL))->right))))
 
-#define NCBAVLNODE_LEFT_PTR_OFFSET (((uint32_t)(&(((NCBAvlNode*)(NULL))->left))))
+#define NCBAVLNODE_LEFT_PTR_OFFSET ((uint32_t)((uint64_t)(&(((NCBAvlNode*)(NULL))->left))))
 
 NCBAvlNode* InsertNCBNode(NCBAvlNode** const _root,
 		NativeCodeBlockDesc* _newblock) {
