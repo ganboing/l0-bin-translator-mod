@@ -2,28 +2,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+struct _NativeCodeModEntry;
 typedef struct _NativeCodeModEntry NativeCodeModEntry;
 
+struct _NativeCodeModEntryList;
 typedef struct _NativeCodeModEntryList NativeCodeModEntryList;
 
+struct _NativeCodeBlockDesc;
 typedef struct _NativeCodeBlockDesc NativeCodeBlockDesc;
 
+struct _NCBAvlNode;
 typedef struct _NCBAvlNode NCBAvlNode;
 
-typedef struct _NativeCodeModEntry {
+struct _NativeCodeModEntry {
 	uint64_t spc;
 	int32_t offset;
 	uint32_t flags;
-}NativeCodeModEntry;
+};
 
-typedef struct _NativeCodeModEntryList{
+struct _NativeCodeModEntryList{
 	NativeCodeModEntry* Head;
 	uint32_t EffecSize;
 	uint32_t AllocSize;
-}NativeCodeModEntryList;
+};
 
 
-typedef struct _NativeCodeBlockDesc {
+struct _NativeCodeBlockDesc {
 	void* NativeCodeBlock; //XXX:should be managed manually
 	void* NativeCodeEntryPoint;
 	NativeCodeBlockDesc** RefedBlocks;
@@ -35,16 +39,16 @@ typedef struct _NativeCodeBlockDesc {
 	NativeCodeModEntryList SpcMap;
 	uint32_t RefedBlockEffecSize;
 	uint32_t RefedBlockAllocSize;
-} NativeCodeBlockDesc;
+};
 
-typedef struct _NCBAvlNode {
+struct _NCBAvlNode {
 	NativeCodeBlockDesc* NCBPtr;
 	NCBAvlNode* parent;
 	NCBAvlNode* left;
 	NCBAvlNode* right;
 	uint32_t height;
 	uint32_t flags;
-} NCBAvlNode;
+} ;
 
 static const NCBAvlNode NCBAvlTerminator = { NULL, NULL, NULL, NULL, 0, 0};
 
