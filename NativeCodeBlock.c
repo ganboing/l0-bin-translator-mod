@@ -14,12 +14,6 @@ typedef struct _NativeCodeModEntryList{
 	uint32_t AllocSize;
 }NativeCodeModEntryList;
 
-typedef struct _NCBAvlNode {
-	struct _NativeCodeBlockDesc* NCBPtr;
-	struct _NCBAvlNode* parent;
-	struct _NCBAvlNode* left;
-	struct _NCBAvlNode* right;
-} NCBAvlNode;
 
 typedef struct _NativeCodeBlockDesc {
 	void* NativeCodeBlock; //XXX:should be managed manually
@@ -34,6 +28,17 @@ typedef struct _NativeCodeBlockDesc {
 	uint32_t RefedBlockEffecSize;
 	uint32_t RefedBlockAllocSize;
 } NativeCodeBlockDesc;
+
+typedef struct _NCBAvlNode {
+	NativeCodeBlockDesc* NCBPtr;
+	struct _NCBAvlNode* parent;
+	struct _NCBAvlNode* left;
+	struct _NCBAvlNode* right;
+	uint32_t height;
+	uint32_t flags;
+} NCBAvlNode;
+
+static const NCBAvlNode NCBAvlTerminator = { NULL, NULL, NULL, NULL, 0, 0};
 
 inline void __SwapMkr(NativeCodeModEntry* x, NativeCodeModEntry* y) {
 	if (x != y) {
@@ -123,43 +128,103 @@ void InsertNCBAvl(NativeCodeBlockDesc* newblock)
 	//__AvlInsert;
 }
 
-#define __AvlTreeFindExact(NODETYPE,ROOT,KEY) \
-__AvlTreeFindExact_Type_##NODETYPE( ROOT, KEY)
+#define NCBAVLNODE_RIGHT_PTR_OFFSET (((uint8_t)(&(((NCBAvlNode*)(NULL))->right))))
 
-#define __AvlTreeFindExact_Prototype(NODETYPE,KEYTYPE) \
-NODETYPE** __AvlTreeFindExact_Type_##NODETYPE( NODETYPE**, KEYTYPE);
+#define NCBAVLNODE_LEFT_PTR_OFFSET (((uint8_t)(&(((NCBAvlNode*)(NULL))->left))))
 
-#define __AvlTreeFindExact_Define(NODETYPE,KEYTYPE,DATAPTR,KEYNAME) \
-NODETYPE** __AvlTreeFindExact_Type_##NODETYPE( NODETYPE** _root, KEYTYPE _key) { \
-	while((*_root)!=NULL) { \
-		if( ((*_root) -> DATAPTR -> KEYNAME) == _key) { \
-			return _root; \
-		} \
-		else { \
-			if( ((*_root) -> DATA -> KEYNAME) < key) { \
-				_root = (&( (*root) -> right )); \
-			} \
-			else { \
-				_root = (&( (*root) -> left )); \
-			} \
-	} \
-	return _root; \
-}
-
-
-
-#define __AvlTreeInsert_Define(NODETYPE,DATATYPE,DATAPTR,KEYNAME) \
-NODETYPE* __AvlTreeInsert_Type_##NODETYPE( NODETYPE** _root, DATATYPE* _value) { \
-	NODETYPE** insertentry = __AvlTreeFindExact(NODETYPE, _root, _value -> KEYNAME); \
-	if ((*insertentry) == NULL) { \
-		(*insertentry) = (NODETYPE*)malloc(sizeof(NODETYPE)); \
-		(*insertentry) -> left = NULL; \
-		(*insertentry) -> right = NULL; \
-		(*insertentry) -> parent = NULL; \
-		(*insertentry) -> DATAPTR = _value; \
-		return (*_root); \
+NCBAvlNode* InsertNCBNode(NCBAvlNode** const _root,
+		NativeCodeBlockDesc* _newblock) {
+	NCBAvlNode* solvednode = (NCBAvlNode*) malloc(sizeof(NCBAvlNode));
+	NCBAvlNode* const newnode = solvednode;
+	solvednode->NCBPtr = _newblock;
+	solvednode->height = 1;
+	solvednode->left = (*_root)->right = (&NCBAvlTerminator);
+	if ((*_root) == (&NCBAvlTerminator)) {
+		(*_root) = solvednode;
+		solvednode->parent = NULL;
+	} else {
+		int32_t sp = -2;
+		NCBAvlNode* origroot = (*_root);
+		NCBAvlNode* pendingnode = origroot;
+		uint8_t ptroffset[0x40];
+		while (1) {
+			sp += 2;
+			if ((pendingnode->NCBPtr->SourceCodeBase)
+					< (_newblock->SourceCodeBase)) {
+				ptroffset[sp] = NCBAVLNODE_RIGHT_PTR_OFFSET;
+				ptroffset[sp + 1] = NCBAVLNODE_LEFT_PTR_OFFSET;
+				if (pendingnode->right != (&NCBAvlTerminator)) {
+					pendingnode->right = solvednode;
+					solvednode->parent = pendingnode;
+					break;
+				} else {
+					pendingnode = pendingnode->right;
+				}
+			} else {
+				ptroffset[sp] = NCBAVLNODE_LEFT_PTR_OFFSET;
+				ptroffset[sp + 1] = NCBAVLNODE_RIGHT_PTR_OFFSET;
+				if (pendingnode->left != (&NCBAvlTerminator)) {
+					pendingnode->left = solvednode;
+					solvednode->parent = pendingnode;
+					break;
+				} else {
+					pendingnode = pendingnode->left;
+				}
+			}
+		}
+		while (sp >= 0) {
+			NCBAvlNode* L1d = (*(NCBAvlNode**) (((void*) pendingnode)
+					+ ptroffset[sp + 1]));
+			if (solvednode->height > (L1d->height + 1)) {
+				NCBAvlNode* L2d = (*(NCBAvlNode**) (((void*) solvednode)
+						+ ptroffset[sp + 1]));
+				NCBAvlNode* L2s = (*(NCBAvlNode**) (((void*) solvednode)
+						+ ptroffset[sp]));
+				if (L2d->height > L2s->height) {
+					L2d->height++;
+					solvednode->height--;
+					pendingnode->height--;
+					NCBAvlNode** L3dp = (NCBAvlNode**) (((void*) L2d)
+							+ ptroffset[sp + 1]);
+					NCBAvlNode** L3sp = (NCBAvlNode**) (((void*) L2d)
+							+ ptroffset[sp]);
+					(*((NCBAvlNode**) (((void*) pendingnode) + ptroffset[sp]))) =
+							(*L3dp);
+					(*L3dp) = pendingnode;
+					L2d->parent = pendingnode->parent;
+					pendingnode->parent = L2d;
+					(*((NCBAvlNode**) (((void*) solvednode) + ptroffset[sp + 1]))) =
+							(*L3sp);
+					(*L3sp) = solvednode;
+					solvednode->parent = L2d;
+					solvednode = L2d;
+				} else {
+					pendingnode->height--;
+					solvednode->parent = pendingnode->parent;
+					pendingnode->parent = solvednode;
+					(*((NCBAvlNode**) (((void*) pendingnode) + ptroffset[sp]))) =
+							L2d;
+					(*((NCBAvlNode**) (((void*) solvednode) + ptroffset[sp + 1]))) =
+							pendingnode;
+				}
+				pendingnode = solvednode->parent;
+				if (pendingnode == NULL ) {
+					(*_root) = solvednode;
+				}
+				break;
+			} else {
+				if (solvednode->height == pendingnode->height) {
+					pendingnode->height++;
+					sp -= 2;
+					solvednode = pendingnode;
+					pendingnode = pendingnode->parent;
+				} else {
+					break;
+				}
+			}
+		}
 	}
-
-__AvlTreeInsert_Define(_NCBAvlNode,_NativeCodeBlockDesc,NCBPtr,SourceCodeBase);
+	return newnode;
+}
 
 
