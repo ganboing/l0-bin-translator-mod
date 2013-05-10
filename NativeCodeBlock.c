@@ -239,4 +239,159 @@ NCBAvlNode* InsertNCBNode(NCBAvlNode** const _root,
 	return newnode;
 }
 
+uint64_t __NCBAvl_DEL_Balance_L(NCBAvlNode* pendingnode,
+		NCBAvlNode** solvednodep) {
+	NCBAvlNode* solvednode;
+	if (pendingnode->right->left->height > pendingnode->right->right->height) {
+		NCBAvlNode* middlenode = pendingnode->right;
+		solvednode = middlenode->left;
+
+		middlenode->height--;
+		solvednode->height++;
+
+		pendingnode->right = solvednode->left;
+		solvednode->left->parent = pendingnode;
+
+		middlenode->left = solvednode->right;
+		solvednode->right->parent = middlenode;
+
+		solvednode->left = pendingnode;
+		solvednode->right = middlenode;
+		solvednode->parent = pendingnode->parent;
+
+		middlenode->parent = solvednode;
+		pendingnode->parent = solvednode;
+
+	} else {
+		solvednode = pendingnode->right;
+
+		pendingnode->right = solvednode->left;
+		solvednode->left->parent = pendingnode;
+
+		solvednode->left = pendingnode;
+		solvednode->parent = pendingnode->parent;
+		pendingnode->parent = solvednode;
+
+		if (solvednode->left->height == solvednode->right->height) {
+			pendingnode->height--;
+			solvednode->height++;
+			(*solvednodep) = solvednode;
+			return 0;
+		}
+	}
+	pendingnode->height -= 2;
+	(*solvednodep) = solvednode;
+	return 1;
+}
+
+uint64_t __NCBAvl_DEL_Balance_R(NCBAvlNode* pendingnode,
+		NCBAvlNode** solvednodep) {
+	NCBAvlNode* solvednode;
+	if (pendingnode->left->right->height > pendingnode->left->left->height) {
+		NCBAvlNode* middlenode = pendingnode->left;
+		solvednode = middlenode->right;
+
+		middlenode->height--;
+		solvednode->height++;
+
+		pendingnode->left = solvednode->right;
+		solvednode->right->parent = pendingnode;
+
+		middlenode->right = solvednode->left;
+		solvednode->left->parent = middlenode;
+
+		solvednode->right = pendingnode;
+		solvednode->left = middlenode;
+		solvednode->parent = pendingnode->parent;
+
+		middlenode->parent = solvednode;
+		pendingnode->parent = solvednode;
+
+	} else {
+		solvednode = pendingnode->left;
+
+		pendingnode->left = solvednode->right;
+		solvednode->right->parent = pendingnode;
+
+		solvednode->right = pendingnode;
+		solvednode->parent = pendingnode->parent;
+		pendingnode->parent = solvednode;
+
+		if (solvednode->right->height == solvednode->left->height) {
+			pendingnode->height--;
+			solvednode->height++;
+			(*solvednodep) = solvednode;
+			return 0;
+		}
+	}
+	pendingnode->height -= 2;
+	(*solvednodep) = solvednode;
+	return 1;
+}
+
+void DeleteNCBAvlNode(NCBAvlNode** const _root,
+		NativeCodeBlockDesc* _targetblock) {
+	NCBAvlNode* findnode = _targetblock->Prt2AvlNode;
+	NCBAvlNode* uppernode = findnode->parent;
+	if (findnode->height > 1) {
+		if (findnode->right->height > findnode->left->height) {
+			NCBAvlNode* sucnode = findnode->right;
+			while (sucnode->left != (&NCBAvlTerminator)) {
+				sucnode = sucnode->left;
+			}
+			if (findnode->right == sucnode) {
+				sucnode->left = findnode->left;
+			} else {
+				NCBAvlNode* pendingnode = sucnode->parent;
+				NCBAvlNode* solvednode = sucnode->right;
+				pendingnode->left = solvednode;
+				solvednode->parent = pendingnode;
+				while(1)
+				{
+					if(pendingnode->right->height > (pendingnode->left->height +1))
+					{
+						if(pendingnode->right->left->height > pendingnode->right->right->height)
+						{
+						}
+						else
+						{
+
+							if(sucnodeparent->right->left->height == sucnodeparent->right->right->height)
+							{
+
+								return;
+							}
+						}
+					}
+					else
+					{
+
+					}
+					if(pendingnode==findnode)
+					{
+						findnode->right = solvednode;
+						break;
+					}
+					else
+					{
+						pendingnode->left = solvednode;
+					}
+				}
+			}
+		} else {
+			NCBAvlNode* prenode = findnode->left;
+			while (prenode->right != (&NCBAvlTerminator)) {
+				prenode = sucnode->right;
+			}
+			if (findnode->left == sucnode) {
+				prenode->right = findnode->right;
+				prenode->height = findnode->right->height + 1;
+			} else {
+
+			}
+		}
+	}
+	free(findnode);
+
+}
 
