@@ -333,9 +333,10 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 		NativeCodeBlockDesc* _targetblock) {
 	NCBAvlNode* findnode = _targetblock->Prt2AvlNode;
 	NCBAvlNode* uppernode = findnode->parent;
+	NCBAvlNode* sucnode;
 	if (findnode->height > 1) {
 		if (findnode->right->height > findnode->left->height) {
-			NCBAvlNode* sucnode = findnode->right;
+			sucnode = findnode->right;
 			while (sucnode->left != (&NCBAvlTerminator)) {
 				sucnode = sucnode->left;
 			}
