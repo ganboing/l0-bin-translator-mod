@@ -239,7 +239,7 @@ NCBAvlNode* InsertNCBNode(NCBAvlNode** const _root,
 	return newnode;
 }
 
-static uint64_t __NCBAvl_DEL_Balance_L(NCBAvlNode** pendingnodep,
+static inline uint64_t __NCBAvl_DEL_Balance_L(NCBAvlNode** pendingnodep,
 		NCBAvlNode** solvednodep, NCBAvlNode** oldrootp) {
 	(*oldrootp) = (*pendingnodep);
 	NCBAvlNode* oldroot = (*oldrootp);
@@ -423,7 +423,7 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 
 				while (1) {
 					if (solvednode->height < (pendingnode->left->height - 1)) {
-						shouldcontinue = __NCbAvl_DEL_Balance_R(&pendingnode,
+						shouldcontinue = __NCBAvl_DEL_Balance_R(&pendingnode,
 								&solvednode, &oldroot);
 						if (pendingnode == findnode) {
 							pendingnode->left = solvednode;
