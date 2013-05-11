@@ -455,6 +455,7 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 
 	} else {
 		pendingnode = findnode ->parent;
+		oldroot = findnode;
 		solvednode = (&NCBAvlTerminator);
 		free(findnode);
 	}
