@@ -239,7 +239,7 @@ NCBAvlNode* InsertNCBNode(NCBAvlNode** const _root,
 	return newnode;
 }
 
-static uint64_t __NCBAvl_DEL_Balance_L(NCBAvlNode** pendingnode,
+static uint64_t __NCBAvl_DEL_Balance_L(NCBAvlNode** pendingnodep,
 		NCBAvlNode** solvednodep, NCBAvlNode** oldrootp) {
 	(*oldrootp) = (*pendingnodep);
 	NCBAvlNode* oldroot = (*oldrootp);
