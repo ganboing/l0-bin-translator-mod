@@ -386,6 +386,7 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 								&& (solvednode->height
 										< (pendingnode->height - 1))) {
 							pendingnode->height--;
+							oldroot = solvednode;
 							solvednode = pendingnode;
 							pendingnode = pendingnode->parent;
 							if (pendingnode == findnode) {
@@ -439,6 +440,7 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 								&& (solvednode->height
 										< (pendingnode->height - 1))) {
 							pendingnode->height--;
+							oldroot = solvednode;
 							solvednode = pendingnode;
 							pendingnode = pendingnode->parent;
 							if (pendingnode == findnode) {
