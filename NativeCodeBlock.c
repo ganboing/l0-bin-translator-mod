@@ -379,23 +379,44 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 							pendingnode->left = solvednode;
 						}
 						if (!shouldcontinue) {
-							break;
+							return;
 						}
 					} else {
 						if ((solvednode->height == pendingnode->right->height)
 								&& (solvednode->height
 										< (pendingnode->height - 1))) {
 							pendingnode->height--;
-							oldroot = solvednode;
 							solvednode = pendingnode;
 							pendingnode = pendingnode->parent;
 							if (pendingnode == findnode) {
 								break;
 							}
 						} else {
-							shouldcontinue = 0;
-							break;
+							return;
 						}
+					}
+				}
+				pendingnode = findnode;
+				solvednode  = findnode->right;
+				if(solvednode->height < (pendingnode->left->height-1))
+				{
+					shouldcontinue = __NCBAvl_DEL_Balance_R(&pendingnode,&solvednode,&oldroot);
+					if(!shouldcontinue)
+					{
+						break;
+					}
+				}
+				else
+				{
+					if((solvednode->height == pendingnode->left->height) &&(solvednode->height < (pendingnode->height-1)))
+					{
+						pendingnode->height--;
+						oldroot = solvednode = pendingnode;
+						pendingnode = pendingnode->parent;
+					}
+					else
+					{
+						return;
 					}
 				}
 			}
@@ -433,28 +454,48 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 							pendingnode->right = solvednode;
 						}
 						if (!shouldcontinue) {
-							break;
+							return;
 						}
 					} else {
 						if ((solvednode->height == pendingnode->left->height)
 								&& (solvednode->height
 										< (pendingnode->height - 1))) {
 							pendingnode->height--;
-							oldroot = solvednode;
 							solvednode = pendingnode;
 							pendingnode = pendingnode->parent;
 							if (pendingnode == findnode) {
 								break;
 							}
 						} else {
-							shouldcontinue = 0;
-							break;
+							return;
 						}
+					}
+				}
+				pendingnode = findnode;
+				solvednode  = findnode->left;
+				if(solvednode->height < (pendingnode->right->height-1))
+				{
+					shouldcontinue = __NCBAvl_DEL_Balance_L(&pendingnode,&solvednode,&oldroot);
+					if(!shouldcontinue)
+					{
+						break;
+					}
+				}
+				else
+				{
+					if((solvednode->height == pendingnode->right->height) &&(solvednode->height < (pendingnode->height-1)))
+					{
+						pendingnode->height--;
+						oldroot = solvednode = pendingnode;
+						pendingnode = pendingnode->parent;
+					}
+					else
+					{
+						return;
 					}
 				}
 			}
 		}
-
 	} else {
 		pendingnode = findnode ->parent;
 		oldroot = findnode;
@@ -479,11 +520,11 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 							pendingnode->height--;
 							oldroot = solvednode = pendingnode;
 						} else {
-							break;
+							return;
 						}
 					}
 				} else {
-					break;
+					return;
 				}
 			}
 			else
@@ -500,11 +541,11 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 							pendingnode->height--;
 							oldroot = solvednode = pendingnode;
 						} else {
-							break;
+							return;
 						}
 					}
 				} else {
-					break;
+					return;
 				}
 			}
 		}
