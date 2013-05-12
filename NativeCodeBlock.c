@@ -401,10 +401,6 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 				if(solvednode->height < (pendingnode->left->height-1))
 				{
 					shouldcontinue = __NCBAvl_DEL_Balance_R(&pendingnode,&solvednode,&oldroot);
-					if(!shouldcontinue)
-					{
-						break;
-					}
 				}
 				else
 				{
@@ -476,10 +472,6 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 				if(solvednode->height < (pendingnode->right->height-1))
 				{
 					shouldcontinue = __NCBAvl_DEL_Balance_L(&pendingnode,&solvednode,&oldroot);
-					if(!shouldcontinue)
-					{
-						break;
-					}
 				}
 				else
 				{
