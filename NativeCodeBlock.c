@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "ASM_MACROS.h"
 
 struct _NativeCodeModEntry;
 typedef struct _NativeCodeModEntry NativeCodeModEntry;
@@ -31,7 +32,7 @@ struct _NativeCodeBlockDesc {
 	void* NativeCodeBlock; //XXX:should be managed manually
 	void* NativeCodeEntryPoint;
 	NativeCodeBlockDesc** RefedBlocks;
-	NCBAvlNode* Prt2AvlNode;
+	NCBAvlNode* Ptr2AvlNode;
 	uint32_t NativeCodeSize;
 	uint32_t SourceCodeSize;
 	uint64_t SourceCodeBase;
@@ -136,7 +137,7 @@ void InsertNCBAvl(NativeCodeBlockDesc* newblock)
 {
 	NCBAvlNode* newnode = (NCBAvlNode*)malloc(sizeof(NCBAvlNode));
 	newnode->NCBPtr = newblock;
-	newblock->Prt2AvlNode = newnode;
+	newblock->Ptr2AvlNode = newnode;
 	//__AvlInsert;
 }
 
@@ -339,7 +340,7 @@ static inline uint64_t __NCBAvl_DEL_Balance_R(NCBAvlNode** pendingnodep,
 
 void DeleteNCBAvlNode(NCBAvlNode** const _root,
 		NativeCodeBlockDesc* _targetblock) {
-	NCBAvlNode* const findnode = _targetblock->Prt2AvlNode;
+	NCBAvlNode* const findnode = _targetblock->Ptr2AvlNode;
 	NCBAvlNode* pendingnode;
 	NCBAvlNode* oldroot;
 	NCBAvlNode* solvednode;
@@ -361,7 +362,7 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 				} while (psnode->left != (&NCBAvlTerminator));
 				findnode->flags = psnode->flags;
 				findnode->NCBPtr = psnode->NCBPtr;
-				findnode->NCBPtr->Prt2AvlNode = findnode;
+				findnode->NCBPtr->Ptr2AvlNode = findnode;
 
 				pendingnode = psnode->parent;
 				solvednode = psnode->right;
@@ -432,7 +433,7 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 				} while (psnode->right != (&NCBAvlTerminator));
 				findnode->flags = psnode->flags;
 				findnode->NCBPtr = psnode->NCBPtr;
-				findnode->NCBPtr->Prt2AvlNode = findnode->NCBPtr->Prt2AvlNode;
+				findnode->NCBPtr->Ptr2AvlNode = findnode;
 
 				pendingnode = psnode->parent;
 				solvednode = psnode->left;
