@@ -385,6 +385,7 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 				}
 				psnode->height = solvednode->height + 1;
 				psnode->right = solvednode;
+				solvednode->parent = psnode;
 			}
 			psnode->left = findnode->left;
 
@@ -429,10 +430,10 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 					psnode->height = solvednode->height + 1;
 				}
 				psnode->left = solvednode;
+				solvednode->parent = psnode;
 			}
 			psnode->right = findnode->right;
 		}
-		solvednode->parent = psnode;
 		psnode->parent = findnode->parent;
 		solvednode = psnode;
 	} else {
