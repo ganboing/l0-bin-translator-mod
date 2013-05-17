@@ -407,7 +407,7 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 					}
 					if (solvednode->height < (pendingnode->left->height - 1)) {
 						rotated = 1;
-						shouldcontinue = __NCB_Avl_DEL_Balance_R(&pendingnode,
+						shouldcontinue = __NCBAvl_DEL_Balance_R(&pendingnode,
 								&solvednode, &oldroot);
 					} else {
 						rotated = 0;
