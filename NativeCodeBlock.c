@@ -432,8 +432,8 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 			psnode->right = findnode->right;
 		}
 		psnode->parent = findnode->parent;
-		solvednode->parent = psnode;
 		solvednode = psnode;
+		solvednode->parent = psnode;
 	} else {
 		solvednode = (&NCBAvlTerminator);
 	}
