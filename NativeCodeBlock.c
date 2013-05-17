@@ -422,8 +422,9 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 						}
 					}
 				}
-				if (solvednode->height < findnode->right->height) {
-					psnode->height = findnode->right->height + 1;
+				if (solvednode->height < findnode->height-1) {
+					psnode->height = findnode->height;
+					shouldcontinue = 0;
 				} else {
 					psnode->height = solvednode->height + 1;
 				}
@@ -431,9 +432,9 @@ void DeleteNCBAvlNode(NCBAvlNode** const _root,
 			}
 			psnode->right = findnode->right;
 		}
+		solvednode->parent = psnode;
 		psnode->parent = findnode->parent;
 		solvednode = psnode;
-		solvednode->parent = psnode;
 	} else {
 		solvednode = (&NCBAvlTerminator);
 	}
