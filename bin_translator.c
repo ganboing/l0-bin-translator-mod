@@ -7844,8 +7844,8 @@ void PrintPBlockMeta(void)
 				_pblockmeta->num);
 		for(i=0;i<_pblockmeta->num;i++)
 		{
-			ModLog( "├────i0 == 0x%lx\n"
-					"├────native == 0x%lx\n",
+			ModLog( "├────i0 == 0x%lx <--> "
+					"native == 0x%lx\n",
 					_pblockmeta->blocks[i].i0,
 					_pblockmeta->blocks[i].native);
 		}
