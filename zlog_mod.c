@@ -25,8 +25,7 @@ void FinalModLog(void)
 	fclose(debug_log);
 }
 
-void LogSyncTest(void)
+int LogSyncTest(int *ptr, int oldval, int newval)
 {
-	int x;
-	__sync_lock_test_and_set(&x,(int)(10));
+	return  __sync_val_compare_and_swap(ptr, oldval, newval);
 }
