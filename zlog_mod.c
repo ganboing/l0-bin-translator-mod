@@ -24,3 +24,8 @@ void FinalModLog(void)
 {
 	fclose(debug_log);
 }
+
+void LogSyncTest(void)
+{
+	__sync_lock_test_and_set();
+}
