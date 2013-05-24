@@ -27,5 +27,6 @@ void FinalModLog(void)
 
 void LogSyncTest(void)
 {
-	__sync_lock_test_and_set();
+	int x;
+	__sync_lock_test_and_set(&x,(int)(10));
 }
