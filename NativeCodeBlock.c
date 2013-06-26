@@ -4,7 +4,6 @@
 #include "ASM_MACROS.h"
 #include "rbtree.h"
 
-
 enum NATIVE_CODE_BLOCK_SIZE{
 	NATIVE_CODE_BLOCK_4K = 0,
 	NATIVE_CODE_BLOCK_8K = 1,
