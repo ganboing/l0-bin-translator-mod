@@ -13,6 +13,14 @@
 #include "ASM_MACROS.h"
 #include "PrintI0Template.h"
 
+#define _IN_
+#define _OUT_
+
+typedef struct _DECODE_STATUS{
+	unsigned long status;
+	unsigned long detail;
+}DECODE_STATUS;
+
 jmp_buf decode_longjmp_buf;
 
 typedef void (*DECODE_OP_IM_FUNC_PTR)(char**,I0OPR*);
@@ -292,4 +300,9 @@ int main(int argc, char** argv)
 		return 1;
 	}
 	return 0;
+}
+
+DECODE_STATUS TranslateI0ToNative(void** i0code,void** nativecode,unsigned int len)
+{
+
 }
