@@ -116,7 +116,7 @@ LDFLAGS=-static -pthread
 
 all: vpc scheduler mem_home 
 
-vpc_obj=zlog.o net_cs.o mem.o misc.o parameter.o mem.vpc.o rcb.o schedulerlib.o perf_counter.o vpc_perf_counter.o bin_translator.o vic.o vpc.o
+vpc_obj=zlog.o zlog_mod.o net_cs.o mem.o misc.o parameter.o mem.vpc.o rcb.o schedulerlib.o perf_counter.o vpc_perf_counter.o bin_translator.o vic.o vpc.o
 
 vpc: $(vpc_obj)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(vpc_obj) runner_wrapper_bin_tran.s -o vpc
