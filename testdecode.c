@@ -170,7 +170,7 @@ DECODE_STATUS TranslateINT_NW(I0INSTR*, uint8_t**, uint8_t*);
 DECODE_STATUS TranslateSPAWN_NW(I0INSTR*, uint8_t**, uint8_t*);
 DECODE_STATUS TranslateSHIFT_NW(I0INSTR*, uint8_t**, uint8_t*);
 DECODE_STATUS TranslateSCMP_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateEXIT_NW(I0INSTR*, uint8_t**, uint8_t*);
+static DECODE_STATUS TranslateEXIT_NW(I0INSTR*, uint8_t**, uint8_t*);
 
 DECODE_STATUS TranslateNOP_WR(I0INSTR*, uint8_t**, uint8_t*);
 DECODE_STATUS TranslateADD_WR(I0INSTR*, uint8_t**, uint8_t*);
@@ -194,7 +194,7 @@ DECODE_STATUS TranslateINT_WR(I0INSTR*, uint8_t**, uint8_t*);
 DECODE_STATUS TranslateSPAWN_WR(I0INSTR*, uint8_t**, uint8_t*);
 DECODE_STATUS TranslateSHIFT_WR(I0INSTR*, uint8_t**, uint8_t*);
 DECODE_STATUS TranslateSCMP_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateEXIT_WR(I0INSTR*, uint8_t**, uint8_t*);
+static DECODE_STATUS TranslateEXIT_WR(I0INSTR*, uint8_t**, uint8_t*);
 
 void sys_back_runner_wrapper(void);
 
