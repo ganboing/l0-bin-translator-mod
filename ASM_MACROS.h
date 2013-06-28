@@ -171,13 +171,13 @@
 
 #define GET_INST_OPR_I64(opr,t) \
 	do{ \
-		(opr).val = *((uint64_t*)(t)); \
+		(opr).val.v64 = *((uint64_t*)(t)); \
 		(t) += 8; \
 	}while(0)
 
 #define GET_INST_OPR_I8(opr,t) \
 	do{ \
-		(opr).val = *((uint8_t*)(t)); \
+		(opr).val.v8 = *((uint8_t*)(t)); \
 		(t) += 1; \
 	}while(0)
 
