@@ -2,6 +2,12 @@
 #include "I0Symbol.h"
 #include "ASM_MACROS.h"
 
+typedef struct _I0OPR {
+	uint64_t val;
+	uint32_t addrm;
+	uint32_t disp32;
+}I0OPR;
+
 typedef struct _I0INSTR {
 	uint64_t addr;
 	uint32_t addr_size_mode;
@@ -20,8 +26,6 @@ typedef struct _DECODE_STATUS{
 
 #define RETURN_DECODE_STATUS(status, detail) \
 	do{ DECODE_STATUS result= {status, detail}; return result;}while(0);
-
-jmp_buf decode_longjmp_buf;
 
 static uint8_t I0OprISize[0x10]=
 {
