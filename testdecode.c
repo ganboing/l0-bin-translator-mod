@@ -261,7 +261,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
 			(*spc) += i0instrlen;
-			GET_INST_OPR_I64((instr->opr[2]), (*spc));
+			GET_INST_OPR_I64((instr.opr[2]), (*spc));
 			return TranslateBL_NW(&instr, tpc, nativelimit);
 			break;
 		case OPT_B_LE:
@@ -288,7 +288,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
 			(*spc) += i0instrlen;
-			GET_INST_OPR_I64((instr->opr[2]), (*spc));
+			GET_INST_OPR_I64((instr.opr[2]), (*spc));
 			return TranslateBLE_NW(&instr, tpc, nativelimit);
 			break;
 		case OPT_B_E:
@@ -315,7 +315,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
 			(*spc) += i0instrlen;
-			GET_INST_OPR_I64((instr->opr[2]), (*spc));
+			GET_INST_OPR_I64((instr.opr[2]), (*spc));
 			return TranslateBE_NW(&instr, tpc, nativelimit);
 			break;
 		case OPT_B_NE:
@@ -342,7 +342,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
 			(*spc) += i0instrlen;
-			GET_INST_OPR_I64((instr->opr[2]), (*spc));
+			GET_INST_OPR_I64((instr.opr[2]), (*spc));
 			return TranslateBNE_NW(&instr, tpc, nativelimit);
 			break;
 		case OPT_B_Z:
@@ -363,7 +363,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
 			(*spc) += i0instrlen;
-			GET_INST_OPR_I64((instr->opr[2]), (*spc));
+			GET_INST_OPR_I64((instr.opr[2]), (*spc));
 			return TranslateBZ_NW(&instr, tpc, nativelimit);
 			break;
 		case OPT_B_NZ:
@@ -384,7 +384,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
 			(*spc) += i0instrlen;
-			GET_INST_OPR_I64((instr->opr[2]), (*spc));
+			GET_INST_OPR_I64((instr.opr[2]), (*spc));
 			return TranslateBNZ_NW(&instr, tpc, nativelimit);
 			break;
 		case OPT_B_SL:
@@ -411,7 +411,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
 			(*spc) += i0instrlen;
-			GET_INST_OPR_I64((instr->opr[2]), (*spc));
+			GET_INST_OPR_I64((instr.opr[2]), (*spc));
 			return TranslateBSL_NW(&instr, tpc, nativelimit);
 			break;
 		case OPT_B_IJ:
