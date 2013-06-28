@@ -227,7 +227,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
 				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
 				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
-				GET_INST_FIELD_WR((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
 			} else {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
@@ -259,7 +259,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
 				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
 				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
-				GET_INST_FIELD_WR((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
 			} else {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
@@ -291,7 +291,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
 				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
 				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
-				GET_INST_FIELD_WR((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
 			} else {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
@@ -323,7 +323,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
 				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
 				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
-				GET_INST_FIELD_WR((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
 			} else {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
@@ -352,7 +352,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			GET_INST_FIELD_ZO(instr.option, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B);
 			switch (instr.option) {
 			case OPT_B_J:
-				GET_INST_FIELD_WR(instr.ra, op, BIT_LEN_ADDR_SIZE_MODE + BIT_LEN_OPCODE + BIT_LEN_OPT_B + BIT_LEN_RA);
+				GET_INST_FIELD_NW(instr.ra, op, BIT_LEN_ADDR_SIZE_MODE + BIT_LEN_OPCODE + BIT_LEN_OPT_B + BIT_LEN_RA);
 				i0instrlen = BYTE_OP_BJ;
 				i0instrlen += 8;
 				if (i0instrlen > i0len) {
@@ -369,7 +369,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 					GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_MATTR);
 					GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
 					GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
-					GET_INST_FIELD_WR((instr.ra), op, BIT_LEN_RA);
+					GET_INST_FIELD_NW((instr.ra), op, BIT_LEN_RA);
 				} else {
 					RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 				}
@@ -398,7 +398,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 					GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_MATTR);
 					GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
 					GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
-					GET_INST_FIELD_WR((instr.ra), op, BIT_LEN_RA);
+					GET_INST_FIELD_NW((instr.ra), op, BIT_LEN_RA);
 				} else {
 					RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 				}
@@ -427,7 +427,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 					GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_MATTR);
 					GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
 					GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
-					GET_INST_FIELD_WR((instr.ra), op, BIT_LEN_RA);
+					GET_INST_FIELD_NW((instr.ra), op, BIT_LEN_RA);
 				} else {
 					RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 				}
@@ -456,7 +456,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 					GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_MATTR);
 					GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
 					GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
-					GET_INST_FIELD_WR((instr.ra), op, BIT_LEN_RA);
+					GET_INST_FIELD_NW((instr.ra), op, BIT_LEN_RA);
 				} else {
 					RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 				}
@@ -484,7 +484,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 					LOAD_OP_BYTE2(op, (*spc));
 					GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B+BIT_LEN_MATTR);
 					GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
-					GET_INST_FIELD_WR(instr.ra, op, BIT_LEN_RA);
+					GET_INST_FIELD_NW(instr.ra, op, BIT_LEN_RA);
 				} else {
 					RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 				}
@@ -506,7 +506,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 					LOAD_OP_BYTE2(op, (*spc));
 					GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B+BIT_LEN_MATTR);
 					GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
-					GET_INST_FIELD_WR(instr.ra, op, BIT_LEN_RA);
+					GET_INST_FIELD_NW(instr.ra, op, BIT_LEN_RA);
 				} else {
 					RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 				}
@@ -529,7 +529,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 					GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_MATTR);
 					GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
 					GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
-					GET_INST_FIELD_WR((instr.ra), op, BIT_LEN_RA);
+					GET_INST_FIELD_NW((instr.ra), op, BIT_LEN_RA);
 				} else {
 					RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 				}
@@ -555,7 +555,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				i0instrlen = BYTE_OP_BIJ;
 				if (i0len >= i0instrlen) {
 					LOAD_OP_BYTE2(op, (*spc));
-					GET_INST_FIELD_WR((instr.opr[0]).addrm, op, BIT_LEN_ADDR_SIZE_MODE + BIT_LEN_OPCODE + BIT_LEN_OPT_B + BIT_LEN_ADDRM);
+					GET_INST_FIELD_NW((instr.opr[0]).addrm, op, BIT_LEN_ADDR_SIZE_MODE + BIT_LEN_OPCODE + BIT_LEN_OPT_B + BIT_LEN_ADDRM);
 				} else {
 					RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 				}
@@ -583,7 +583,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
 				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
 				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
-				GET_INST_FIELD_WR((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
 			} else {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
@@ -615,7 +615,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
 				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
 				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
-				GET_INST_FIELD_WR((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
 			} else {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
@@ -647,7 +647,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
 				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
 				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
-				GET_INST_FIELD_WR((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
 			} else {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
@@ -679,7 +679,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_MATTR);
 				GET_INST_FIELD_SH(instr.attr2, op, BIT_LEN_MATTR);
 				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
-				GET_INST_FIELD_WR((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
 			} else {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
@@ -716,7 +716,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_ADDRM);
 				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
 				GET_INST_FIELD_SH((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
-				GET_INST_FIELD_WR((instr.opr[3]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[3]).addrm, op, BIT_LEN_ADDRM);
 			} else {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
@@ -754,7 +754,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_MATTR);
 				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
 				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
-				GET_INST_FIELD_WR((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
 			} else {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
@@ -787,7 +787,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
 				GET_INST_FIELD_SH((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
 				GET_INST_FIELD_SH((instr.opr[3]).addrm, op, BIT_LEN_ADDRM);
-				GET_INST_FIELD_WR((instr.opr[4]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[4]).addrm, op, BIT_LEN_ADDRM);
 				instr.attr = MATTR_UE;
 			} else {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
@@ -825,7 +825,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			break;
 		case OP_EXIT:
 			i0instrlen = BYTE_OP_EXIT;
-			GET_INST_FIELD_WR(instr.option, op, BIT_LEN_ADDR_SIZE_MODE + BIT_LEN_OPCODE + BIT_LEN_OPT_EXIT);
+			GET_INST_FIELD_NW(instr.option, op, BIT_LEN_ADDR_SIZE_MODE + BIT_LEN_OPCODE + BIT_LEN_OPT_EXIT);
 			(*spc) += i0instrlen;
 			return TranslateEXIT_WR(&instr, tpc, nativelimit);
 			break;
