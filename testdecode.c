@@ -198,7 +198,7 @@ DECODE_STATUS TranslateEXIT_WR(I0INSTR*, uint8_t**, uint8_t*);
 
 void sys_back_runner_wrapper(void);
 
-inline DECODE_STATUS TranslateEXIT_WR(I0INSTR* instr, uint8_t** tpc, uint8_t* nativelimit)
+static inline DECODE_STATUS TranslateEXIT_WR(I0INSTR* instr, uint8_t** tpc, uint8_t* nativelimit)
 {
 	//movl $option, %edi
 	//movl $back_runner_wrapper, %eax
@@ -222,8 +222,9 @@ inline DECODE_STATUS TranslateEXIT_WR(I0INSTR* instr, uint8_t** tpc, uint8_t* na
 	}
 }
 
-inline DECODE_STATUS TranslateEXIT_NW(I0INSTR* instr, uint8_t** tpc, uint8_t* nativelimit)
+static inline DECODE_STATUS TranslateEXIT_NW(I0INSTR* instr, uint8_t** tpc, uint8_t* nativelimit)
 {
+	(void)instr;
 	unsigned long nativelen = (((unsigned long)nativelimit)-((unsigned long)(*tpc)));
 	if(nativelen<0x0c)
 	{
