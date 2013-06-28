@@ -196,6 +196,8 @@ DECODE_STATUS TranslateSHIFT_WR(I0INSTR*, uint8_t**, uint8_t*);
 DECODE_STATUS TranslateSCMP_WR(I0INSTR*, uint8_t**, uint8_t*);
 DECODE_STATUS TranslateEXIT_WR(I0INSTR*, uint8_t**, uint8_t*);
 
+void sys_back_runner_wrapper(void);
+
 inline DECODE_STATUS TranslateEXIT_WR(I0INSTR* instr, uint8_t** tpc, uint8_t* nativelimit)
 {
 	//movl $option, %edi
