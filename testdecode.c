@@ -358,7 +358,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			if (!I0OprDSize[instr.attr][instr.opr[0].addrm]) {
 				RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);
 			}
-			i0instrlen += (I0OprDSize[instr.attr][instr.opr[0].addrm] + 8);
+			i0instrlen += (I0OprDSize[instr.attr][instr.opr[0].addrm] + 8U);
 			if (i0instrlen > i0len) {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
@@ -379,7 +379,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			if (!I0OprDSize[instr.attr][instr.opr[0].addrm]) {
 				RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);
 			}
-			i0instrlen += (I0OprDSize[instr.attr][instr.opr[0].addrm] + 8);
+			i0instrlen += (I0OprDSize[instr.attr][instr.opr[0].addrm] + 8U);
 			if (i0instrlen > i0len) {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
