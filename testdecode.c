@@ -209,12 +209,12 @@ inline DECODE_STATUS TranslateEXIT_WR(I0INSTR* instr, uint8_t** tpc, uint8_t* na
 	else
 	{
 		(*((*tpc)++)) = 0xbf;
-		(*((uint32_t)(*tpc))) = instr->option;
+		(*((uint32_t*)(*tpc))) = instr->option;
 		(*tpc) += 4;
 		(*((*tpc)++)) = 0xb8;
-		(*((uint32_t)(*tpc))) = ((uint32_t)sys_back_runner_wrapper);
+		(*((uint32_t*)(*tpc))) = ((uint32_t)sys_back_runner_wrapper);
 		(*tpc) += 4;
-		(*((uint16_t)(*tpc))) = 0xe0ff;
+		(*((uint16_t*)(*tpc))) = 0xe0ff;
 		(*tpc) += 2;
 		RETURN_DECODE_STATUS(I0_DECODE_SUCCESSFUL, 0);
 	}
