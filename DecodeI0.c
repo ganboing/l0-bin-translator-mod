@@ -341,18 +341,18 @@ int main(int argc, char** argv)
 
 typedef DECODE_STATUS (*TranslateNative)(I0INSTR*,void**,void*,unsigned int);
 
-inline DECODE_STATUS TranslateNOP_NW(I0INSTR* instr, void** tpc, void* nativelimit) {
+static inline DECODE_STATUS TranslateNOP_NW(I0INSTR* instr, void** tpc, void* nativelimit) {
 	(void) instr;
 	unsigned long nativelen = (((unsigned long) nativelimit) - ((unsigned long) (*tpc)));
 	if (nativelen > 0) {
 		(*tpc)++;
 		RETURN_DECODE_STATUS(I0_DECODE_SUCCESSFUL, 0);
 	} else {
-		RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
+		RETURN_DECODE_STATUS(NATIVE_CODE_SEGMENT_LIMIT, 0);
 	}
 }
 
-/*inline DECODE_STATUS TranslateNOP_WR(I0INSTR* instr, void** tpc, void* nativelimit) {
+static inline DECODE_STATUS TranslateNOP_WR(I0INSTR* instr, void** tpc, void* nativelimit) {
 	(void) instr;
 	unsigned long nativelen = (((unsigned long) nativelimit) - ((unsigned long) (*tpc)));
 	if (nativelen > 0) {
@@ -360,9 +360,48 @@ inline DECODE_STATUS TranslateNOP_NW(I0INSTR* instr, void** tpc, void* nativelim
 		(*((unsigned char*) (*tpc))) = 0x90;
 		RETURN_DECODE_STATUS(I0_DECODE_SUCCESSFUL, 0);
 	} else {
-		RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
+		RETURN_DECODE_STATUS(NATIVE_CODE_SEGMENT_LIMIT, 0);
 	}
-}*/
+}
+
+inline DECODE_STATUS TranslateEXIT_WR(I0INSTR* instr, uint8_t** tpc, uint8_t* nativelimit)
+{
+	//movl $option, %edi
+	//movl $back_runner_wrapper, %eax
+	//jmp *%rax
+	unsigned long nativelen = (((unsigned long)nativelimit)-((unsigned long)(*tpc)));
+	if(nativelen<0x0c)
+	{
+		RETURN_DECODE_STATUS(NATIVE_CODE_SEGMENT_LIMIT, 0);
+	}
+	else
+	{
+		(*((*tpc)++)) = 0xbf;
+		(*((uint32_t)(*tpc))) = instr->option;
+		(*tpc) += 4;
+		(*((*tpc)++)) = 0xb8;
+		(*((uint32_t)(*tpc))) = ((uint32_t)sys_back_runner_wrapper);
+		(*tpc) += 4;
+		(*((uint16_t)(*tpc))) = 0xe0ff;
+		(*tpc) += 2;
+		RETURN_DECODE_STATUS(I0_DECODE_SUCCESSFUL, 0);
+	}
+}
+
+inline DECODE_STATUS TranslateEXIT_NW(I0INSTR* instr, uint8_t** tpc, uint8_t* nativelimit)
+{
+	unsigned long nativelen = (((unsigned long)nativelimit)-((unsigned long)(*tpc)));
+	if(nativelen<0x0c)
+	{
+		RETURN_DECODE_STATUS(NATIVE_CODE_SEGMENT_LIMIT, 0);
+	}
+	else
+	{
+		(*tpc) += 0x0c;
+		RETURN_DECODE_STATUS(I0_DECODE_SUCCESSFUL, 0);
+	}
+
+}
 
 DECODE_STATUS TranslateNOP_NW(I0INSTR*, void**, void*);
 DECODE_STATUS TranslateADD_NW(I0INSTR*, void**, void*);

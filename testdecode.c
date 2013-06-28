@@ -196,13 +196,51 @@ DECODE_STATUS TranslateSHIFT_WR(I0INSTR*, uint8_t**, uint8_t*);
 DECODE_STATUS TranslateSCMP_WR(I0INSTR*, uint8_t**, uint8_t*);
 DECODE_STATUS TranslateEXIT_WR(I0INSTR*, uint8_t**, uint8_t*);
 
+inline DECODE_STATUS TranslateEXIT_WR(I0INSTR* instr, uint8_t** tpc, uint8_t* nativelimit)
+{
+	//movl $option, %edi
+	//movl $back_runner_wrapper, %eax
+	//jmp *%rax
+	unsigned long nativelen = (((unsigned long)nativelimit)-((unsigned long)(*tpc)));
+	if(nativelen<0x0c)
+	{
+		RETURN_DECODE_STATUS(NATIVE_CODE_SEGMENT_LIMIT, 0);
+	}
+	else
+	{
+		(*((*tpc)++)) = 0xbf;
+		(*((uint32_t)(*tpc))) = instr->option;
+		(*tpc) += 4;
+		(*((*tpc)++)) = 0xb8;
+		(*((uint32_t)(*tpc))) = ((uint32_t)sys_back_runner_wrapper);
+		(*tpc) += 4;
+		(*((uint16_t)(*tpc))) = 0xe0ff;
+		(*tpc) += 2;
+		RETURN_DECODE_STATUS(I0_DECODE_SUCCESSFUL, 0);
+	}
+}
+
+inline DECODE_STATUS TranslateEXIT_NW(I0INSTR* instr, uint8_t** tpc, uint8_t* nativelimit)
+{
+	unsigned long nativelen = (((unsigned long)nativelimit)-((unsigned long)(*tpc)));
+	if(nativelen<0x0c)
+	{
+		RETURN_DECODE_STATUS(NATIVE_CODE_SEGMENT_LIMIT, 0);
+	}
+	else
+	{
+		(*tpc) += 0x0c;
+		RETURN_DECODE_STATUS(I0_DECODE_SUCCESSFUL, 0);
+	}
+
+}
 
 DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativelimit, uint8_t* i0limit, unsigned int is_write) {
 	I0INSTR instr;
 	unsigned int op;
 	unsigned long i0instrlen = 0;
 	unsigned long i0len = (((unsigned long) i0limit) - ((unsigned long) (*spc)));
-	if (i0len >= ((BIT_LEN_ADDR_SIZE_MODE + BIT_LEN_OPCODE) / 8)) {
+	if (i0len >= ((BIT_LEN_ADDR_SIZE_MODE + BIT_LEN_OPCODE+8-1) / 8)) {
 		LOAD_OP_WORD0(op, (*spc));
 	} else {
 		RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
