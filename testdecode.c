@@ -39,7 +39,7 @@
 			(spc) = (typeof(spc))(((uint64_t*)(spc))+1);\
 			break;\
 		} \
-	while(0)
+	}while(0)
 
 #define DECODE_OPR_M(opr, spc, addrm)\
 	do{\
@@ -51,8 +51,9 @@
 		default:\
 			(opr).val.v64 = (*((uint64_t*)(spc)));\
 			(spc) = (typeof(spc))(((uint64_t*)(spc))+1);\
+			break;\
 		}\
-	while(0)
+	}while(0)
 
 #define DECODE_OPR_D(opr, spc, addrm, attr)\
 	do{\
@@ -65,7 +66,7 @@
 			DECODE_OPR_M(opr, spc, addrm);\
 			break;\
 		}\
-	while(0)
+	}while(0)
 
 typedef union _OPRVAL {
 	uint8_t v8;
@@ -208,6 +209,8 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 		}
 		(*spc) += BYTE_OP_ALU;
 		DECODE_OPR_D(instr.opr[0],spc,instr.opr[0].addrm,instr.attr);
+		DECODE_OPR_D(instr.opr[1],spc,instr.opr[1].addrm,instr.attr);
+		DECODE_OPR_M(instr.opr[0],spc,instr.opr[0].addrm);
 		return TranslateADD_NW(&instr, tpc, nativelimit);
 		break;
 
