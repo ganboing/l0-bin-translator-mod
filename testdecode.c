@@ -2,8 +2,80 @@
 #include "I0Symbol.h"
 #include "ASM_MACROS.h"
 
+#define DECODE_OPR_I(opr, spc, attr) \
+	do { \
+		switch(attr) \
+		{ \
+		case ATTR_SB:\
+			(opr).val.v8 = (*((uint8_t*)(spc)));\
+			(spc) = (typeof(spc))(((uint8_t*)(spc))+1);\
+			break;\
+		case ATTR_SE:\
+			(opr).val.v64 = (*((uint64_t*)(spc)));\
+			(spc) = (typeof(spc))(((uint64_t*)(spc))+1);\
+			break;\
+		case ATTR_SF:\
+			(opr).val.v32 = (*((uint32_t*)(spc)));\
+			(spc) = (typeof(spc))(((uint32_t*)(spc))+1);\
+			break;\
+		case ATTR_UB:\
+			(opr).val.v8 = (*((uint8_t*)(spc)));\
+			(spc) = (typeof(spc))(((uint8_t*)(spc))+1);\
+			break;\
+		case ATTR_UE:\
+			(opr).val.v64 = (*((uint64_t*)(spc)));\
+			(spc) = (typeof(spc))(((uint64_t*)(spc))+1);\
+			break;\
+		case ATTR_UF:\
+			(opr).val.v32 = (*((uint32_t*)(spc)));\
+			(spc) = (typeof(spc))(((uint32_t*)(spc))+1);\
+			break;\
+		case ATTR_FS:\
+			(opr).val.v32 = (*((uint32_t*)(spc)));\
+			(spc) = (typeof(spc))(((uint32_t*)(spc))+1);\
+			break;\
+		case ATTR_FD:\
+			(opr).val.v64 = (*((uint64_t*)(spc)));\
+			(spc) = (typeof(spc))(((uint64_t*)(spc))+1);\
+			break;\
+		} \
+	while(0)
+
+#define DECODE_OPR_M(opr, spc, addrm)\
+	do{\
+		switch(addrm)\
+		{\
+		case ADDRM_DISPLACEMENT:\
+			(opr).disp32 = (*((uint32_t*)(spc)));\
+			(spc) = (typeof(spc))(((uint32_t*)(spc))+1);\
+		default:\
+			(opr).val.v64 = (*((uint64_t*)(spc)));\
+			(spc) = (typeof(spc))(((uint64_t*)(spc))+1);\
+		}\
+	while(0)
+
+#define DECODE_OPR_D(opr, spc, addrm, attr)\
+	do{\
+		switch(addrm)\
+		{\
+		case ADDRM_IMMEDIATE:\
+			DECODE_OPR_I(opr, spc, attr);\
+			break;\
+		default:\
+			DECODE_OPR_M(opr, spc, addrm);\
+			break;\
+		}\
+	while(0)
+
+typedef union _OPRVAL {
+	uint8_t v8;
+	uint16_t v16;
+	uint32_t v32;
+	uint64_t v64;
+}OPRVAL;
+
 typedef struct _I0OPR {
-	uint64_t val;
+	OPRVAL val;
 	uint32_t addrm;
 	uint32_t disp32;
 }I0OPR;
@@ -134,7 +206,8 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 		if (i0instrlen > i0len) {
 			RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 		}
-		(*spc) += i0instrlen;
+		(*spc) += BYTE_OP_ALU;
+		DECODE_OPR_D(instr.opr[0],spc,instr.opr[0].addrm,instr.attr);
 		return TranslateADD_NW(&instr, tpc, nativelimit);
 		break;
 	case OP_SUB:
