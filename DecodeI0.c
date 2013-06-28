@@ -1133,7 +1133,8 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			if (i0instrlen > i0len) {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
-			(*spc) += i0instrlen;
+			(*spc) += (i0instrlen-8);
+			GET_INST_OPR_I64((instr.opr[0]), (*spc));
 			return TranslateBJ_NW(&instr, tpc, nativelimit);
 			break;
 		case OPT_B_L:
@@ -1159,7 +1160,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			if (i0instrlen > i0len) {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
-			(*spc) += i0instrlen;
+			(*spc) += (i0instrlen-8);
 			GET_INST_OPR_I64((instr.opr[2]), (*spc));
 			return TranslateBL_NW(&instr, tpc, nativelimit);
 			break;
@@ -1186,7 +1187,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			if (i0instrlen > i0len) {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
-			(*spc) += i0instrlen;
+			(*spc) += (i0instrlen-8);
 			GET_INST_OPR_I64((instr.opr[2]), (*spc));
 			return TranslateBLE_NW(&instr, tpc, nativelimit);
 			break;
@@ -1213,7 +1214,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			if (i0instrlen > i0len) {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
-			(*spc) += i0instrlen;
+			(*spc) += (i0instrlen-8);
 			GET_INST_OPR_I64((instr.opr[2]), (*spc));
 			return TranslateBE_NW(&instr, tpc, nativelimit);
 			break;
@@ -1240,7 +1241,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			if (i0instrlen > i0len) {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
-			(*spc) += i0instrlen;
+			(*spc) += (i0instrlen-8);
 			GET_INST_OPR_I64((instr.opr[2]), (*spc));
 			return TranslateBNE_NW(&instr, tpc, nativelimit);
 			break;
@@ -1261,7 +1262,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			if (i0instrlen > i0len) {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
-			(*spc) += i0instrlen;
+			(*spc) += (i0instrlen-8);
 			GET_INST_OPR_I64((instr.opr[2]), (*spc));
 			return TranslateBZ_NW(&instr, tpc, nativelimit);
 			break;
@@ -1282,7 +1283,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			if (i0instrlen > i0len) {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
-			(*spc) += i0instrlen;
+			(*spc) += (i0instrlen-8);
 			GET_INST_OPR_I64((instr.opr[2]), (*spc));
 			return TranslateBNZ_NW(&instr, tpc, nativelimit);
 			break;
@@ -1309,7 +1310,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			if (i0instrlen > i0len) {
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
-			(*spc) += i0instrlen;
+			(*spc) += (i0instrlen-8);
 			GET_INST_OPR_I64((instr.opr[2]), (*spc));
 			return TranslateBSL_NW(&instr, tpc, nativelimit);
 			break;
