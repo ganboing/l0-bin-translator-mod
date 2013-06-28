@@ -352,7 +352,7 @@ inline DECODE_STATUS TranslateNOP_NW(I0INSTR* instr, void** tpc, void* nativelim
 	}
 }
 
-inline DECODE_STATUS TranslateNOP_WR(I0INSTR* instr, void** tpc, void* nativelimit) {
+/*inline DECODE_STATUS TranslateNOP_WR(I0INSTR* instr, void** tpc, void* nativelimit) {
 	(void) instr;
 	unsigned long nativelen = (((unsigned long) nativelimit) - ((unsigned long) (*tpc)));
 	if (nativelen > 0) {
@@ -362,7 +362,7 @@ inline DECODE_STATUS TranslateNOP_WR(I0INSTR* instr, void** tpc, void* nativelim
 	} else {
 		RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 	}
-}
+}*/
 
 DECODE_STATUS TranslateNOP_NW(I0INSTR*, void**, void*);
 DECODE_STATUS TranslateADD_NW(I0INSTR*, void**, void*);
