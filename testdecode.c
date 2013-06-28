@@ -706,7 +706,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 				RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
 			}
 			(*spc) += BYTE_OP_INT;
-			GET_INST_OPR_I8((instr->opr[0]), (*spc));
+			GET_INST_OPR_I8((instr.opr[0]), (*spc));
 			return TranslateINT_WR(&instr, tpc, nativelimit);
 			break;
 		case OP_SPAWN:
