@@ -210,6 +210,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 		DECODE_OPR_D(instr.opr[0],spc,instr.opr[0].addrm,instr.attr);
 		return TranslateADD_NW(&instr, tpc, nativelimit);
 		break;
+
 	case OP_SUB:
 		i0instrlen = BYTE_OP_ALU;
 		if (i0len >= i0instrlen) {
