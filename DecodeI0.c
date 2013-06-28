@@ -13,13 +13,16 @@
 #include "ASM_MACROS.h"
 #include "PrintI0Template.h"
 
-#define _IN_
-#define _OUT_
+//#define _IN_
+//#define _OUT_
 
 typedef struct _DECODE_STATUS{
 	unsigned long status;
 	unsigned long detail;
 }DECODE_STATUS;
+
+#define RETURN_DECODE_STATUS(status, detail) \
+	do{ DECODE_STATUS result= {status, detail}; return result;}while(0);
 
 jmp_buf decode_longjmp_buf;
 
@@ -67,6 +70,40 @@ static const DECODE_OP_IM_FUNC_PTR decode_op_m_ptr[1<<BIT_LEN_ADDRM]=
 	DecodeOprMUndefined,		//0x05
 	DecodeOprMUndefined,		//0x06
 	DecodeOprMUndefined,		//0x07
+};
+
+static uint8_t I0OprISize[0x10]=
+{
+	0x08, 0x40, 0x00, 0x20,
+	0x08, 0x40, 0x00, 0x20,
+	0x20, 0x40, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00
+};
+
+static uint8_t I0OprMSize[0x08]=
+{
+	0x00, 0x08, 0x08, 0x0c,
+	0x00, 0x00, 0x00, 0x00
+};
+
+static uint8_t I0OprDSize[0x10][0x08]=
+{
+	0x08, 0x08, 0x08, 0x0c, 0x00, 0x00, 0x00, 0x00,
+	0x40, 0x08, 0x08, 0x0c, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x20, 0x08, 0x08, 0x0c, 0x00, 0x00, 0x00, 0x00,
+	0x08, 0x08, 0x08, 0x0c, 0x00, 0x00, 0x00, 0x00,
+	0x40, 0x08, 0x08, 0x0c, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x20, 0x08, 0x08, 0x0c, 0x00, 0x00, 0x00, 0x00,
+	0x20, 0x08, 0x08, 0x0c, 0x00, 0x00, 0x00, 0x00,
+	0x40, 0x08, 0x08, 0x0c, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 static inline void DecodeOprI(char** codeptr,I0OPR* opr,uint32_t mattr)
@@ -302,7 +339,648 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-DECODE_STATUS TranslateI0ToNative(void** i0code,void** nativecode,unsigned int len)
-{
+typedef DECODE_STATUS (*TranslateNative)(I0INSTR*,void**,void*,unsigned int);
 
+inline DECODE_STATUS TranslateNOP_NW(I0INSTR* instr, void** tpc, void* nativelimit) {
+	(void) instr;
+	unsigned long nativelen = (((unsigned long) nativelimit) - ((unsigned long) (*tpc)));
+	if (nativelen > 0) {
+		(*tpc)++;
+		RETURN_DECODE_STATUS(I0_DECODE_SUCCESSFUL, 0);
+	} else {
+		RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
+	}
+}
+
+inline DECODE_STATUS TranslateNOP_WR(I0INSTR* instr, void** tpc, void* nativelimit) {
+	(void) instr;
+	unsigned long nativelen = (((unsigned long) nativelimit) - ((unsigned long) (*tpc)));
+	if (nativelen > 0) {
+		(*tpc)++;
+		(*((unsigned char*) (*tpc))) = 0x90;
+		RETURN_DECODE_STATUS(I0_DECODE_SUCCESSFUL, 0);
+	} else {
+		RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
+	}
+}
+
+DECODE_STATUS TranslateNOP_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateADD_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateSUB_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateMUL_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateDIV_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateBJ_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateBL_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateBLE_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateBE_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateBNE_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateBZ_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateBNZ_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateBSL_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateBIJ_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateAND_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateOR_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateXOR_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateCONV_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateINT_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateSPAWN_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateSHIFT_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateSCMP_NW(I0INSTR*, void**, void*);
+DECODE_STATUS TranslateEXIT_NW(I0INSTR*, void**, void*);
+
+DECODE_STATUS TranslateI0ToNative(void** spc, void** tpc, void* i0limit, void* nativelimit, unsigned int is_write) {
+	I0INSTR instr;
+	unsigned int op;
+	unsigned long i0instrlen = 0;
+	unsigned long i0len = (((unsigned long) i0limit) - ((unsigned long) (*spc)));
+	if (i0len > 1) {
+		LOAD_OP_WORD0(op, (*spc));
+	} else {
+		RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);
+	}
+	instr.addr = (uint64_t) (*spc);
+	GET_INST_FIELD_ZO(instr.opcode, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE);
+	if (is_write) {
+		switch (instr.opcode) {
+		case OP_NOP:
+			(*spc) += BYTE_OP_NOP;
+			return TranslateNOP_WR(&instr, tpc, nativelimit);
+			break;
+		case OP_ADD:
+		case OP_SUB:
+		case OP_MUL:
+		case OP_DIV:
+			LOAD_OP_BYTE2(op, (*spc));
+			GET_INST_FIELD_SH(instr->attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
+			GET_INST_FIELD_SH((instr->opr[0]).addrm, op, BIT_LEN_ADDRM);
+			GET_INST_FIELD_SH((instr->opr[1]).addrm, op, BIT_LEN_ADDRM);
+			GET_INST_FIELD_NW((instr->opr[2]).addrm, op, BIT_LEN_ADDRM);
+			(*spc) += BYTE_OP_ALU;
+			DecodeOprD(spc, &(instr->opr[0]), (instr->opr[0]).addrm, instr->attr);
+			DecodeOprD(spc, &(instr->opr[1]), (instr->opr[1]).addrm, instr->attr);
+			DecodeOprM(spc, &(instr->opr[2]), (instr->opr[2]).addrm);
+			break;
+		case OP_B:
+			GET_INST_FIELD_ZO(instr->option, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B);
+			switch (instr->option) {
+			case OPT_B_J:
+				GET_INST_FIELD_NW(instr->ra, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B+BIT_LEN_RA);
+				(*spc) += BYTE_OP_BJ;
+				//(instr->opr[0]).addrm=ADDRM_IMMEDIATE;
+				GET_INST_OPR_I64((instr->opr[0]), (*spc));
+				break;
+			case OPT_B_L:
+			case OPT_B_LE:
+			case OPT_B_E:
+			case OPT_B_NE:
+				LOAD_OP_DWORD_AND_SH(op, (*spc), BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B);
+				GET_INST_FIELD_SH(instr->attr, op, BIT_LEN_MATTR);
+				GET_INST_FIELD_SH((instr->opr[0]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr->opr[1]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr->ra), op, BIT_LEN_RA);
+				(*spc) += BYTE_OP_BCMP;
+				DecodeOprD(spc, &(instr->opr[0]), (instr->opr[0]).addrm, instr->attr);
+				DecodeOprD(spc, &(instr->opr[1]), (instr->opr[1]).addrm, instr->attr);
+				//(instr->opr[2]).addrm=ADDRM_IMMEDIATE;
+				GET_INST_OPR_I64((instr->opr[2]), (*spc));
+				break;
+			case OPT_B_Z:
+			case OPT_B_NZ:
+				LOAD_OP_BYTE2(op, (*spc));
+				GET_INST_FIELD_SH(instr->attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B+BIT_LEN_MATTR);
+				GET_INST_FIELD_SH((instr->opr[0]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW(instr->ra, op, BIT_LEN_RA);
+				(*spc) += BYTE_OP_BZNZ;
+				DecodeOprD(spc, &(instr->opr[0]), (instr->opr[0]).addrm, instr->attr);
+				GET_INST_OPR_I64((instr->opr[1]), (*spc));
+				break;
+			case OPT_B_SL:
+				LOAD_OP_DWORD_AND_SH(op, (*spc), BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B);
+				GET_INST_FIELD_SH(instr->attr, op, BIT_LEN_MATTR);
+				GET_INST_FIELD_SH((instr->opr[0]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr->opr[1]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr->ra), op, BIT_LEN_RA);
+				(*spc) += BYTE_OP_BCMP;
+				DecodeOprD(spc, &(instr->opr[0]), (instr->opr[0]).addrm, instr->attr);
+				DecodeOprD(spc, &(instr->opr[1]), (instr->opr[1]).addrm, instr->attr);
+				//(instr->opr[2]).addrm=ADDRM_IMMEDIATE;
+				GET_INST_OPR_I64((instr->opr[2]), (*spc));
+				break;
+			case OPT_B_IJ:
+				LOAD_OP_BYTE2(op, (*spc));
+				GET_INST_FIELD_NW((instr->opr[0]).addrm, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B+BIT_LEN_ADDRM);
+				(*spc) += BYTE_OP_BIJ;
+				DecodeOprM(spc, &(instr->opr[0]), (instr->opr[0]).addrm);
+				break;
+			default:
+				longjmp(decode_longjmp_buf, OPCODE_B_UNDEFINED);
+			}
+			break;
+		case OP_AND:
+		case OP_OR:
+		case OP_XOR:
+			LOAD_OP_BYTE2(op, (*spc));
+			GET_INST_FIELD_SH(instr->attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
+			GET_INST_FIELD_SH((instr->opr[0]).addrm, op, BIT_LEN_ADDRM);
+			GET_INST_FIELD_SH((instr->opr[1]).addrm, op, BIT_LEN_ADDRM);
+			GET_INST_FIELD_NW((instr->opr[2]).addrm, op, BIT_LEN_ADDRM);
+			(*spc) += BYTE_OP_ALU;
+			DecodeOprD(spc, &(instr->opr[0]), (instr->opr[0]).addrm, instr->attr);
+			DecodeOprD(spc, &(instr->opr[1]), (instr->opr[1]).addrm, instr->attr);
+			DecodeOprM(spc, &(instr->opr[1]), (instr->opr[2]).addrm);
+			break;
+		case OP_CONV:
+			LOAD_OP_DWORD_AND_SH(op, (*spc), BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE);
+			GET_INST_FIELD_SH(instr->attr, op, BIT_LEN_MATTR);
+			GET_INST_FIELD_SH(instr->attr2, op, BIT_LEN_MATTR);
+			GET_INST_FIELD_SH((instr->opr[0]).addrm, op, BIT_LEN_ADDRM);
+			GET_INST_FIELD_NW((instr->opr[1]).addrm, op, BIT_LEN_ADDRM);
+			(*spc) += BYTE_OP_CONV;
+			DecodeOprD(spc, &(instr->opr[0]), (instr->opr[0]).addrm, instr->attr);
+			DecodeOprM(spc, &(instr->opr[1]), (instr->opr[1]).addrm);
+			break;
+		case OP_INT:
+			(*spc) += BYTE_OP_INT;
+			GET_INST_OPR_I8((instr->opr[0]), (*spc));
+			break;
+		case OP_SPAWN:
+			LOAD_OP_BYTE2(op, (*spc));
+			GET_INST_FIELD_SH((instr->opr[0]).addrm, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_ADDRM);
+			GET_INST_FIELD_SH((instr->opr[1]).addrm, op, BIT_LEN_ADDRM);
+			GET_INST_FIELD_SH((instr->opr[2]).addrm, op, BIT_LEN_ADDRM);
+			GET_INST_FIELD_NW((instr->opr[3]).addrm, op, BIT_LEN_ADDRM);
+			(*spc) += BYTE_OP_SPAWN;
+			DecodeOprM(spc, &(instr->opr[0]), (instr->opr[0]).addrm);
+			DecodeOprM(spc, &(instr->opr[1]), (instr->opr[1]).addrm);
+			DecodeOprM(spc, &(instr->opr[2]), (instr->opr[2]).addrm);
+			DecodeOprM(spc, &(instr->opr[3]), (instr->opr[3]).addrm);
+			break;
+		case OP_SHIFT:
+			LOAD_OP_DWORD_AND_SH(op, (*spc), BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE);
+			GET_INST_FIELD_SH(instr->option, op, BIT_LEN_OPT_SHIFT);
+			GET_INST_FIELD_SH(instr->attr, op, BIT_LEN_MATTR);
+			GET_INST_FIELD_SH((instr->opr[0]).addrm, op, BIT_LEN_ADDRM);
+			GET_INST_FIELD_SH((instr->opr[1]).addrm, op, BIT_LEN_ADDRM);
+			GET_INST_FIELD_NW((instr->opr[2]).addrm, op, BIT_LEN_ADDRM);
+			(*spc) += BYTE_OP_SHIFT;
+			DecodeOprD(spc, &(instr->opr[0]), (instr->opr[0]).addrm, instr->attr);
+			DecodeOprD(spc, &(instr->opr[1]), (instr->opr[1]).addrm, MATTR_UB);
+			DecodeOprM(spc, &(instr->opr[2]), (instr->opr[2]).addrm);
+			break;
+		case OP_SCMP:
+			LOAD_OP_DWORD_AND_SH(op, (*spc), BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE);
+			GET_INST_FIELD_SH((instr->opr[0]).addrm, op, BIT_LEN_ADDRM);
+			GET_INST_FIELD_SH((instr->opr[1]).addrm, op, BIT_LEN_ADDRM);
+			GET_INST_FIELD_SH((instr->opr[2]).addrm, op, BIT_LEN_ADDRM);
+			GET_INST_FIELD_SH((instr->opr[3]).addrm, op, BIT_LEN_ADDRM);
+			GET_INST_FIELD_NW((instr->opr[4]).addrm, op, BIT_LEN_ADDRM);
+			(*spc) += BYTE_OP_SCMP;
+			instr->attr = MATTR_UE;
+			DecodeOprM(spc, &(instr->opr[0]), (instr->opr[0]).addrm);
+			DecodeOprD(spc, &(instr->opr[1]), (instr->opr[1]).addrm, instr->attr);
+			DecodeOprM(spc, &(instr->opr[2]), (instr->opr[2]).addrm);
+			DecodeOprD(spc, &(instr->opr[3]), (instr->opr[3]).addrm, instr->attr);
+			DecodeOprM(spc, &(instr->opr[4]), (instr->opr[4]).addrm);
+			break;
+		case OP_EXIT:
+			GET_INST_FIELD_NW(instr->option, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_EXIT);
+			(*spc) += BYTE_OP_EXIT;
+			break;
+		default:
+			fprintf(stderr, "unexcepted op code %x\n", instr->opcode);
+			longjmp(decode_longjmp_buf, OPCODE_UNDEFINED);
+		}
+	} else {
+		switch(instr.opcode)
+		{
+		case OP_NOP:
+			i0instrlen = BYTE_OP_NOP;
+			(*spc) += i0instrlen;
+			return TranslateNOP_NW(&instr, tpc, nativelimit);
+			break;
+		case OP_ADD:
+			i0instrlen = BYTE_OP_ALU;
+			if(i0len>=i0instrlen)
+			{
+				LOAD_OP_BYTE2(op, (*spc));
+				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
+				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+			}
+			else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[0].addrm];
+			if(!I0OprDSize[instr.attr][instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[1].addrm];
+			if(!I0OprMSize[instr.opr[2].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[2].addrm];
+			if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			(*spc) += i0instrlen;
+			return TranslateADD_NW(&instr, tpc, nativelimit);
+			break;
+		case OP_SUB:
+			i0instrlen = BYTE_OP_ALU;
+			if(i0len>=i0instrlen)
+			{
+				LOAD_OP_BYTE2(op, (*spc));
+				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
+				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+			}
+			else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[0].addrm];
+			if(!I0OprDSize[instr.attr][instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[1].addrm];
+			if(!I0OprMSize[instr.opr[2].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[2].addrm];
+			if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			(*spc) += i0instrlen;
+			return TranslateSUB_NW(&instr, tpc, nativelimit);
+			break;
+		case OP_MUL:
+			i0instrlen = BYTE_OP_ALU;
+			if(i0len>=i0instrlen)
+			{
+				LOAD_OP_BYTE2(op, (*spc));
+				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
+				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+			}
+			else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[0].addrm];
+			if(!I0OprDSize[instr.attr][instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[1].addrm];
+			if(!I0OprMSize[instr.opr[2].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[2].addrm];
+			if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			(*spc) += i0instrlen;
+			return TranslateMUL_NW(&instr, tpc, nativelimit);
+			break;
+		case OP_DIV:
+			i0instrlen = BYTE_OP_ALU;
+			if(i0len>=i0instrlen)
+			{
+				LOAD_OP_BYTE2(op, (*spc));
+				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
+				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+			}
+			else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[0].addrm];
+			if(!I0OprDSize[instr.attr][instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[1].addrm];
+			if(!I0OprMSize[instr.opr[2].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[2].addrm];
+			if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			(*spc) += i0instrlen;
+			return TranslateDIV_NW(&instr, tpc, nativelimit);
+			break;
+		case OP_B:
+			GET_INST_FIELD_ZO(instr.option, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B);
+			switch (instr.option) {
+			case OPT_B_J:
+				GET_INST_FIELD_NW(instr.ra, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B+BIT_LEN_RA);
+				i0instrlen = BYTE_OP_BJ;
+				i0instrlen += 8;
+				if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				(*spc) += i0instrlen;
+				return TranslateBJ_NW(&instr, tpc, nativelimit);
+				break;
+			case OPT_B_L:
+				i0instrlen = BYTE_OP_BCMP;
+				if(i0len>=i0instrlen)
+				{
+					LOAD_OP_DWORD_AND_SH(op, (*spc), BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B);
+					GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_MATTR);
+					GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+					GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+					GET_INST_FIELD_NW((instr.ra), op, BIT_LEN_RA);
+				}
+				else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+				i0instrlen += I0OprDSize[instr.attr][instr.opr[0].addrm];
+				if(!I0OprDSize[instr.attr][instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+				i0instrlen += I0OprDSize[instr.attr][instr.opr[1].addrm];
+				i0instrlen += 8;
+				if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				(*spc) += i0instrlen;
+				GET_INST_OPR_I64((instr->opr[2]), (*spc));
+				return TranslateBL_NW(&instr, tpc, nativelimit);
+				break;
+			case OPT_B_LE:
+				i0instrlen = BYTE_OP_BCMP;
+				if(i0len>=i0instrlen)
+				{
+					LOAD_OP_DWORD_AND_SH(op, (*spc), BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B);
+					GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_MATTR);
+					GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+					GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+					GET_INST_FIELD_NW((instr.ra), op, BIT_LEN_RA);
+				}
+				else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+				i0instrlen += I0OprDSize[instr.attr][instr.opr[0].addrm];
+				if(!I0OprDSize[instr.attr][instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+				i0instrlen += I0OprDSize[instr.attr][instr.opr[1].addrm];
+				i0instrlen += 8;
+				if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				(*spc) += i0instrlen;
+				GET_INST_OPR_I64((instr->opr[2]), (*spc));
+				return TranslateBLE_NW(&instr, tpc, nativelimit);
+				break;
+			case OPT_B_E:
+				i0instrlen = BYTE_OP_BCMP;
+				if(i0len>=i0instrlen)
+				{
+					LOAD_OP_DWORD_AND_SH(op, (*spc), BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B);
+					GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_MATTR);
+					GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+					GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+					GET_INST_FIELD_NW((instr.ra), op, BIT_LEN_RA);
+				}
+				else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+				i0instrlen += I0OprDSize[instr.attr][instr.opr[0].addrm];
+				if(!I0OprDSize[instr.attr][instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+				i0instrlen += I0OprDSize[instr.attr][instr.opr[1].addrm];
+				i0instrlen += 8;
+				if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				(*spc) += i0instrlen;
+				GET_INST_OPR_I64((instr->opr[2]), (*spc));
+				return TranslateBE_NW(&instr, tpc, nativelimit);
+				break;
+			case OPT_B_NE:
+				i0instrlen = BYTE_OP_BCMP;
+				if(i0len>=i0instrlen)
+				{
+					LOAD_OP_DWORD_AND_SH(op, (*spc), BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B);
+					GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_MATTR);
+					GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+					GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+					GET_INST_FIELD_NW((instr.ra), op, BIT_LEN_RA);
+				}
+				else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+				i0instrlen += I0OprDSize[instr.attr][instr.opr[0].addrm];
+				if(!I0OprDSize[instr.attr][instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+				i0instrlen += I0OprDSize[instr.attr][instr.opr[1].addrm];
+				i0instrlen += 8;
+				if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				(*spc) += i0instrlen;
+				GET_INST_OPR_I64((instr->opr[2]), (*spc));
+				return TranslateBNE_NW(&instr, tpc, nativelimit);
+				break;
+			case OPT_B_Z:
+				i0instrlen = BYTE_OP_BZNZ;
+				if(i0len>=i0instrlen)
+				{
+					LOAD_OP_BYTE2(op, (*spc));
+					GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B+BIT_LEN_MATTR);
+					GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+					GET_INST_FIELD_NW(instr.ra, op, BIT_LEN_RA);
+				}
+				else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+				i0instrlen += (I0OprDSize[instr.attr][instr.opr[0].addrm] + 8);
+				if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				(*spc) += i0instrlen;
+				GET_INST_OPR_I64((instr->opr[2]), (*spc));
+				return TranslateBZ_NW(&instr, tpc, nativelimit);
+				break;
+			case OPT_B_NZ:
+				i0instrlen = BYTE_OP_BZNZ;
+				if(i0len>=i0instrlen)
+				{
+					LOAD_OP_BYTE2(op, (*spc));
+					GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B+BIT_LEN_MATTR);
+					GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+					GET_INST_FIELD_NW(instr.ra, op, BIT_LEN_RA);
+				}
+				else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+				i0instrlen += (I0OprDSize[instr.attr][instr.opr[0].addrm] + 8);
+				if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				(*spc) += i0instrlen;
+				GET_INST_OPR_I64((instr->opr[2]), (*spc));
+				return TranslateBNZ_NW(&instr, tpc, nativelimit);
+				break;
+			case OPT_B_SL:
+				i0instrlen = BYTE_OP_BCMP;
+				if(i0len>=i0instrlen)
+				{
+					LOAD_OP_DWORD_AND_SH(op, (*spc), BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B);
+					GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_MATTR);
+					GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+					GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+					GET_INST_FIELD_NW((instr.ra), op, BIT_LEN_RA);
+				}
+				else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+				i0instrlen += I0OprDSize[instr.attr][instr.opr[0].addrm];
+				if(!I0OprDSize[instr.attr][instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+				i0instrlen += I0OprDSize[instr.attr][instr.opr[1].addrm];
+				i0instrlen += 8;
+				if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				(*spc) += i0instrlen;
+				GET_INST_OPR_I64((instr->opr[2]), (*spc));
+				return TranslateBSL_NW(&instr, tpc, nativelimit);
+				break;
+			case OPT_B_IJ:
+				i0instrlen = BYTE_OP_BIJ;
+				if(i0len>=i0instrlen)
+				{
+					LOAD_OP_BYTE2(op, (*spc));
+					GET_INST_FIELD_NW((instr.opr[0]).addrm, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_B+BIT_LEN_ADDRM);
+				}
+				else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				if(!I0OprMSize[instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+				i0instrlen += I0OprMSize[instr.opr[0].addrm];
+				if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+				(*spc) += i0instrlen;
+				return TranslateBIJ_NW(&instr, tpc, nativelimit);
+				break;
+			default:
+				RETURN_DECODE_STATUS(OPCODE_B_UNDEFINED, 0);
+				break;
+			}
+			break;
+		case OP_AND:
+			i0instrlen = BYTE_OP_ALU;
+			if(i0len>=i0instrlen)
+			{
+				LOAD_OP_BYTE2(op, (*spc));
+				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
+				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+			}
+			else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[0].addrm];
+			if(!I0OprDSize[instr.attr][instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[1].addrm];
+			if(!I0OprMSize[instr.opr[2].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[2].addrm];
+			if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			(*spc) += i0instrlen;
+			return TranslateAND_NW(&instr, tpc, nativelimit);
+			break;
+		case OP_OR:
+			i0instrlen = BYTE_OP_ALU;
+			if(i0len>=i0instrlen)
+			{
+				LOAD_OP_BYTE2(op, (*spc));
+				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
+				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+			}
+			else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[0].addrm];
+			if(!I0OprDSize[instr.attr][instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[1].addrm];
+			if(!I0OprMSize[instr.opr[2].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[2].addrm];
+			if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			(*spc) += i0instrlen;
+			return TranslateOR_NW(&instr, tpc, nativelimit);
+			break;
+		case OP_XOR:
+			i0instrlen = BYTE_OP_ALU;
+			if(i0len>=i0instrlen)
+			{
+				LOAD_OP_BYTE2(op, (*spc));
+				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_MATTR);
+				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+			}
+			else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[0].addrm];
+			if(!I0OprDSize[instr.attr][instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[1].addrm];
+			if(!I0OprMSize[instr.opr[2].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[2].addrm];
+			if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			(*spc) += i0instrlen;
+			return TranslateXOR_NW(&instr, tpc, nativelimit);
+			break;
+		case OP_CONV:
+			i0instrlen = BYTE_OP_CONV;
+			if(i0len>=i0instrlen)
+			{
+				LOAD_OP_DWORD_AND_SH(op, (*spc), BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE);
+				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_MATTR);
+				GET_INST_FIELD_SH(instr.attr2, op, BIT_LEN_MATTR);
+				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+			}
+			else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[0].addrm];
+			if(!I0OprMSize[instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[1].addrm];
+			if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			(*spc) += i0instrlen;
+			return TranslateCONV_NW(&instr, tpc, nativelimit);
+			break;
+		case OP_INT:
+			i0instrlen = BYTE_OP_INT;
+			i0instrlen += 8;
+			if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			(*spc) += i0instrlen;
+			return TranslateINT_NW(&instr, tpc, nativelimit);
+			break;
+		case OP_SPAWN:
+			i0instrlen = BYTE_OP_SPAWN;
+			if(i0len>=i0instrlen)
+			{
+				LOAD_OP_BYTE2(op, (*spc));
+				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[3]).addrm, op, BIT_LEN_ADDRM);
+			}
+			else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			if(!I0OprMSize[instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[0].addrm];
+			if(!I0OprMSize[instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[1].addrm];
+			if(!I0OprMSize[instr.opr[2].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[2].addrm];
+			if(!I0OprMSize[instr.opr[3].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[3].addrm];
+			if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			(*spc) += i0instrlen;
+			return TranslateSPAWN_NW(&instr, tpc, nativelimit);
+			break;
+		case OP_SHIFT:
+			i0instrlen = BYTE_OP_SHIFT;
+			if(i0len>=i0instrlen)
+			{
+				LOAD_OP_DWORD_AND_SH(op, (*spc), BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE);
+				GET_INST_FIELD_SH(instr.option, op, BIT_LEN_OPT_SHIFT);
+				GET_INST_FIELD_SH(instr.attr, op, BIT_LEN_MATTR);
+				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+			}
+			else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			if(!I0OprDSize[instr.attr][instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[0].addrm];
+			if(!I0OprDSize[MATTR_UB][instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[MATTR_UB][instr.opr[1].addrm];
+			if(!I0OprMSize[instr.opr[2].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[2].addrm];
+			if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			(*spc) += i0instrlen;
+			return TranslateSHIFT_NW(&instr, tpc, nativelimit);
+			break;
+		case OP_SCMP:
+			i0instrlen = BYTE_OP_SCMP;
+			if(i0len>=i0instrlen)
+			{
+				LOAD_OP_DWORD_AND_SH(op, (*spc), BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE);
+				GET_INST_FIELD_SH((instr.opr[0]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr.opr[1]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr.opr[2]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_SH((instr.opr[3]).addrm, op, BIT_LEN_ADDRM);
+				GET_INST_FIELD_NW((instr.opr[4]).addrm, op, BIT_LEN_ADDRM);
+				instr.attr = MATTR_UE;
+			}
+			else{RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			if(!I0OprMSize[instr.opr[0].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[0].addrm];
+			if(!I0OprDSize[instr.attr][instr.opr[1].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[1].addrm];
+			if(!I0OprMSize[instr.opr[2].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[2].addrm];
+			if(!I0OprDSize[instr.attr][instr.opr[3].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprDSize[instr.attr][instr.opr[3].addrm];
+			if(!I0OprMSize[instr.opr[4].addrm]){RETURN_DECODE_STATUS(I0_INSTR_OPERAND_UNDEFINED, 0);}
+			i0instrlen += I0OprMSize[instr.opr[4].addrm];
+			if(i0instrlen>i0len){RETURN_DECODE_STATUS(I0_CODE_SEGMENT_LIMIT, 0);}
+			(*spc) += i0instrlen;
+			return TranslateSCMP_NW(&instr, tpc, nativelimit);
+			break;
+		case OP_EXIT:
+			i0instrlen = BYTE_OP_EXIT;
+			GET_INST_FIELD_NW(instr.option, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE+BIT_LEN_OPT_EXIT);
+			(*spc) += i0instrlen;
+			return TranslateEXIT_NW(&instr, tpc, nativelimit);
+			break;
+		default:
+			RETURN_DECODE_STATUS(OPCODE_UNDEFINED, 0);
+			break;
+		}
+	}
 }

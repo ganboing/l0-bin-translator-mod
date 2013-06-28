@@ -4,6 +4,21 @@
 #define STR(s) #s
 #define XSTR(s) STR(s)
 
+#define LFENCE() \
+	__asm__ __volatile__ (\
+		"lfence"\
+	)
+
+#define SFENCE() \
+	__asm__ __volatile__ (\
+		"sfence"\
+	)
+
+#define MFENCE() \
+	__asm__ __volatile__ (\
+		"mfence"\
+	)
+
 #define XCHG_LOCK(dest, src) \
 	__asm__ __volatile__ (\
 		"xchgb %1, %0"\

@@ -4,6 +4,19 @@
 #include "ASM_MACROS.h"
 #include "rbtree.h"
 
+typedef struct _STPC_HASH_TABLE_ENTRY STPC_HASH_TABLE_ENTRY;
+
+struct _STPC_HASH_TABLE_ENTRY
+{
+	void* spc;
+	void* tpc;
+	STPC_HASH_TABLE_ENTRY* pnlnk[1];
+};
+
+STPC_HASH_TABLE_ENTRY IndirJmpHashTab[0x4000];
+
+#define SIZEOF_STPC_HASH_TABLE_CHAIN_ENTRY ((sizeof(STPC_HASH_TABLE_ENTRY))+sizeof(STPC_HASH_TABLE_ENTRY*))
+
 enum NATIVE_CODE_BLOCK_SIZE{
 	NATIVE_CODE_BLOCK_4K = 0,
 	NATIVE_CODE_BLOCK_8K = 1,
@@ -86,9 +99,11 @@ void* __NativeCodePoolAlloc4k(void)
 				BIT_RESET_16_VOLATILE(NativeCodePool4k_Level0BitMap, l0idx_16);
 			}
 		}
+		MFENCE();
 		NativeCodePool4k_lock = 0;
 		return (void*)(NativeCodePool+((1ULL)<<(28ULL))*0+(l0idx*64*64+l1idx*64+l2idx)*4ULL*1024ULL);
 	}
+	LFENCE();
 	NativeCodePool4k_lock = 0;
 	return 0;
 }
@@ -116,6 +131,7 @@ void __NativeCodePoolFree4k(unsigned long pooloffset)
 	BIT_SET_64_VOLATILE(NativeCodePool4k_Level1BitMap[l1start],l1idx_64);
 	BIT_SET_16_VOLATILE(NativeCodePool4k_Level0BitMap,l0idx_16);
 
+	SFENCE();
 	NativeCodePool4k_lock = 0;
 	return;
 }
@@ -151,9 +167,11 @@ void* __NativeCodePoolAlloc8k(void)
 				BIT_RESET_16_VOLATILE(NativeCodePool8k_Level0BitMap, l0idx_16);
 			}
 		}
+		MFENCE();
 		NativeCodePool8k_lock = 0;
 		return (void*)(NativeCodePool+((1ULL)<<(28ULL))*1+(l0idx*32*64+l1idx*64+l2idx)*8ULL*1024ULL);
 	}
+	LFENCE();
 	NativeCodePool8k_lock = 0;
 	return 0;
 }
@@ -181,6 +199,7 @@ void __NativeCodePoolFree8k(unsigned long pooloffset)
 	BIT_SET_32_VOLATILE(NativeCodePool8k_Level1BitMap[l1start],l1idx_32);
 	BIT_SET_16_VOLATILE(NativeCodePool8k_Level0BitMap,l0idx_16);
 
+	SFENCE();
 	NativeCodePool8k_lock = 0;
 	return;
 }
@@ -216,9 +235,11 @@ void* __NativeCodePoolAlloc16k(void)
 				BIT_RESET_16_VOLATILE(NativeCodePool16k_Level0BitMap, l0idx_16);
 			}
 		}
+		MFENCE();
 		NativeCodePool16k_lock = 0;
 		return (void*)(NativeCodePool+((1ULL)<<(28ULL))*2+(l0idx*16*64+l1idx*64+l2idx)*16ULL*1024ULL);
 	}
+	LFENCE();
 	NativeCodePool16k_lock = 0;
 	return 0;
 }
@@ -246,6 +267,7 @@ void __NativeCodePoolFree16k(unsigned long pooloffset)
 	BIT_SET_16_VOLATILE(NativeCodePool16k_Level1BitMap[l1start],l1idx_16);
 	BIT_SET_16_VOLATILE(NativeCodePool16k_Level0BitMap,l0idx_16);
 
+	SFENCE();
 	NativeCodePool16k_lock = 0;
 	return;
 }
@@ -281,9 +303,11 @@ void* __NativeCodePoolAlloc32k(void)
 				BIT_RESET_16_VOLATILE(NativeCodePool32k_Level0BitMap, l0idx_16);
 			}
 		}
+		MFENCE();
 		NativeCodePool32k_lock = 0;
 		return (void*)(NativeCodePool+((1ULL)<<(28ULL))*3+(l0idx*16*32+l1idx*32+l2idx)*32ULL*1024ULL);
 	}
+	LFENCE();
 	NativeCodePool32k_lock = 0;
 	return 0;
 }
@@ -311,6 +335,7 @@ void __NativeCodePoolFree32k(unsigned long pooloffset)
 	BIT_SET_16_VOLATILE(NativeCodePool32k_Level1BitMap[l1start],l1idx_16);
 	BIT_SET_16_VOLATILE(NativeCodePool32k_Level0BitMap,l0idx_16);
 
+	SFENCE();
 	NativeCodePool32k_lock = 0;
 	return;
 }
@@ -338,9 +363,11 @@ void* __NativeCodePoolAlloc64k(void)
 		{
 			BIT_RESET_64_VOLATILE(NativeCodePool64k_Level0BitMap, l0idx_64);
 		}
+		MFENCE();
 		NativeCodePool64k_lock = 0;
 		return (void*)(NativeCodePool+((1ULL)<<(28ULL))*4+(l0idx*64+l1idx)*64ULL*1024ULL);
 	}
+	LFENCE();
 	NativeCodePool64k_lock = 0;
 	return 0;
 }
@@ -363,6 +390,7 @@ void __NativeCodePoolFree64k(unsigned long pooloffset)
 	BIT_SET_64_VOLATILE(NativeCodePool64k_Level1BitMap[l1start],l1idx_64);
 	BIT_SET_64_VOLATILE(NativeCodePool64k_Level0BitMap,l0idx_64);
 
+	SFENCE();
 	NativeCodePool64k_lock = 0;
 	return;
 }
@@ -390,9 +418,11 @@ void* __NativeCodePoolAlloc128k(void)
 		{
 			BIT_RESET_32_VOLATILE(NativeCodePool128k_Level0BitMap, l0idx_32);
 		}
+		MFENCE();
 		NativeCodePool128k_lock = 0;
 		return (void*)(NativeCodePool+((1ULL)<<(28ULL))*5+(l0idx*64+l1idx)*128ULL*1024ULL);
 	}
+	LFENCE();
 	NativeCodePool128k_lock = 0;
 	return 0;
 }
@@ -415,6 +445,7 @@ void __NativeCodePoolFree128k(unsigned long pooloffset)
 	BIT_SET_64_VOLATILE(NativeCodePool128k_Level1BitMap[l1start],l1idx_64);
 	BIT_SET_32_VOLATILE(NativeCodePool128k_Level0BitMap,l0idx_32);
 
+	SFENCE();
 	NativeCodePool128k_lock = 0;
 	return;
 }
@@ -442,9 +473,11 @@ void* __NativeCodePoolAlloc256k(void)
 		{
 			BIT_RESET_16_VOLATILE(NativeCodePool256k_Level0BitMap, l0idx_16);
 		}
+		MFENCE();
 		NativeCodePool256k_lock = 0;
 		return (void*)(NativeCodePool+((1ULL)<<(28ULL))*6+(l0idx*64+l1idx)*256ULL*1024ULL);
 	}
+	LFENCE();
 	NativeCodePool256k_lock = 0;
 	return 0;
 }
@@ -467,6 +500,7 @@ void __NativeCodePoolFree256k(unsigned long pooloffset)
 	BIT_SET_64_VOLATILE(NativeCodePool256k_Level1BitMap[l1start],l1idx_64);
 	BIT_SET_16_VOLATILE(NativeCodePool256k_Level0BitMap,l0idx_16);
 
+	SFENCE();
 	NativeCodePool256k_lock = 0;
 	return;
 }
@@ -494,9 +528,11 @@ void* __NativeCodePoolAlloc512k(void)
 		{
 			BIT_RESET_16_VOLATILE(NativeCodePool512k_Level0BitMap, l0idx_16);
 		}
+		MFENCE();
 		NativeCodePool512k_lock = 0;
 		return (void*)(NativeCodePool+((1ULL)<<(28ULL))*7+(l0idx*32+l1idx)*512ULL*1024ULL);
 	}
+	LFENCE();
 	NativeCodePool512k_lock = 0;
 	return 0;
 }
@@ -519,6 +555,7 @@ void __NativeCodePoolFree512k(unsigned long pooloffset)
 	BIT_SET_32_VOLATILE(NativeCodePool512k_Level1BitMap[l1start],l1idx_32);
 	BIT_SET_16_VOLATILE(NativeCodePool512k_Level0BitMap,l0idx_16);
 
+	SFENCE();
 	NativeCodePool512k_lock = 0;
 	return;
 }
