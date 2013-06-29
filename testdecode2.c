@@ -242,7 +242,7 @@ inline  void EncodeMovMOff32ToR_QWORD(uint8_t** tpc, uint8_t reg, uint8_t base, 
 	(*((uint32_t*)(*tpc))) = offset;
 	(*tpc) += 4;
 }
-inline  void EncodeMovMToR_BYTE(uint8_t** tpc, uint8_t reg, uint8_t base, uint32_t offset)
+inline  void EncodeMovMToR_BYTE(uint8_t** tpc, uint8_t reg, uint8_t base)
 {
 	uint8_t rex = 0;
 	if(reg>=0x08)
@@ -270,7 +270,7 @@ inline  void EncodeMovMToR_BYTE(uint8_t** tpc, uint8_t reg, uint8_t base, uint32
 		(*((*tpc)++)) = EncodeModRM_NoCheck(0, base, reg);
 	}
 }
-inline  void EncodeMovMToR_WORD(uint8_t** tpc, uint8_t reg, uint8_t base, uint32_t offset)
+inline  void EncodeMovMToR_WORD(uint8_t** tpc, uint8_t reg, uint8_t base)
 {
 	uint8_t rex = 0;
 	if(reg>=0x08)
@@ -299,7 +299,7 @@ inline  void EncodeMovMToR_WORD(uint8_t** tpc, uint8_t reg, uint8_t base, uint32
 		(*((*tpc)++)) = EncodeModRM_NoCheck(0, base, reg);
 	}
 }
-inline  void EncodeMovMToR_DOWRD(uint8_t** tpc, uint8_t reg, uint8_t base, uint32_t offset)
+inline  void EncodeMovMToR_DOWRD(uint8_t** tpc, uint8_t reg, uint8_t base)
 {
 	uint8_t rex = 0;
 	if(reg>=0x08)
@@ -327,7 +327,7 @@ inline  void EncodeMovMToR_DOWRD(uint8_t** tpc, uint8_t reg, uint8_t base, uint3
 		(*((*tpc)++)) = EncodeModRM_NoCheck(0, base, reg);
 	}
 }
-inline  void EncodeMovMToR_QWORD(uint8_t** tpc, uint8_t reg, uint8_t base, uint32_t offset)
+inline  void EncodeMovMToR_QWORD(uint8_t** tpc, uint8_t reg, uint8_t base)
 {
 	uint8_t rex = 0;
 	if(reg>=0x08)
