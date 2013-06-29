@@ -25,6 +25,22 @@
 		: "+m" (dest), "+r" (src)\
 	)
 
+#define BIT_SCAN_32(dest, src) \
+	__asm__ (\
+		"bsfl, %1, %0"\
+		: "=r" (dest)\
+		: "g" (src)\
+		: "cc" \
+	)
+
+#define BIT_SCAN_64(dest, src) \
+	__asm__ (\
+		"bsfq, %1, %0"\
+		: "=r" (dest)\
+		: "g" (src)\
+		: "cc" \
+	)
+
 #define BIT_SCAN_16_VOLATILE(dest,src) \
 	__asm__ __volatile__ (\
 		"bsfw %1, %0"\
