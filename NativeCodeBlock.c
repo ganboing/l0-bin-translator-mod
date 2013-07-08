@@ -616,6 +616,8 @@ inline uint32_t SpcHashFunc(uint64_t spc)
 	return (spc & (IJ_TABLE_SIZE - 1));
 }
 
+#define CRITICAL_MEM_LOW 0x02
+
 #define INC_LIST_ENTRY(listdesc) \
 do{\
 	__typeof((listdesc).list) newptr;\
@@ -623,12 +625,17 @@ do{\
 	{\
 		if( ((listdesc).EffecSize) >= ((4ULL*1024ULL) / sizeof(__typeof((listdesc).list[0]))))\
 		{\
-			newptr = \
+			newptr = (__typeof((listdesc).list))realloc(((listdesc).EffecSize)*sizeof(__typeof((listdesc).list[0])) + (1024ULL));\
 		}\
 		else\
 		{\
-			\
+			newptr = (__typeof((listdesc).list))realloc(((listdesc).EffecSize)*sizeof(__typeof((listdesc).list[0]))*2);\
 		}\
+		if(newptr == NULL)\
+		{\
+			exit(CRITICAL_MEM_LOW);\
+		}\
+		(listdesc).list = newptr;\
 	}\
 }while(0)
 
