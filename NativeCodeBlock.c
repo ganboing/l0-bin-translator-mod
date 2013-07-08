@@ -4,18 +4,6 @@
 #include "ASM_MACROS.h"
 #include "rbtree.h"
 
-typedef struct _STPC_HASH_TABLE_ENTRY STPC_HASH_TABLE_ENTRY;
-
-struct _STPC_HASH_TABLE_ENTRY
-{
-	void* spc;
-	void* tpc;
-	STPC_HASH_TABLE_ENTRY* pnlnk[1];
-};
-
-STPC_HASH_TABLE_ENTRY IndirJmpHashTab[0x4000];
-
-#define SIZEOF_STPC_HASH_TABLE_CHAIN_ENTRY ((sizeof(STPC_HASH_TABLE_ENTRY))+sizeof(STPC_HASH_TABLE_ENTRY*))
 
 enum NATIVE_CODE_BLOCK_SIZE{
 	NATIVE_CODE_BLOCK_4K = 0,
@@ -608,11 +596,47 @@ void NativeCodePoolFree(void* poolptr)
 	const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
 	(type *)( (char *)__mptr - offsetof(type,member) );})
 
-struct _NativeCodeModEntry;
-typedef struct _NativeCodeModEntry NativeCodeModEntry;
+typedef struct _STPC_HASH_TABLE_ENTRY STPC_HASH_TABLE_ENTRY;
 
-struct _NativeCodeModEntryList;
-typedef struct _NativeCodeModEntryList NativeCodeModEntryList;
+struct _STPC_HASH_TABLE_ENTRY
+{
+	uint64_t spc;
+	uint64_t tpc;
+	STPC_HASH_TABLE_ENTRY* pnlnk[1];
+};
+
+#define IJ_TABLE_SIZE 0x4000
+
+STPC_HASH_TABLE_ENTRY IndirJmpHashTab[IJ_TABLE_SIZE];
+
+#define SIZEOF_STPC_HASH_TABLE_CHAIN_ENTRY ((sizeof(STPC_HASH_TABLE_ENTRY))+sizeof(STPC_HASH_TABLE_ENTRY*))
+
+inline uint32_t SpcHashFunc(uint64_t spc)
+{
+	return (spc & (IJ_TABLE_SIZE - 1));
+}
+
+#define INC_LIST_ENTRY(listdesc) \
+do{\
+	__typeof((listdesc).list) newptr;\
+	if((listdesc).EffecSize == (listdesc).AllocSize)\
+	{\
+		if( ((listdesc).EffecSize) >= ((4ULL*1024ULL) / sizeof(__typeof((listdesc).list[0]))))\
+		{\
+			newptr = \
+		}\
+		else\
+		{\
+			\
+		}\
+	}\
+}while(0)
+
+struct _NativeCodeRelocEntry;
+typedef struct _NativeCodeRelocEntry NativeCodeRelocEntry;
+
+struct _NativeCodeRelocList;
+typedef struct _NativeCodeRelocList NativeCodeRelocList;
 
 struct _NativeCodeBlockDesc;
 typedef struct _NativeCodeBlockDesc NativeCodeBlockDesc;
@@ -620,33 +644,114 @@ typedef struct _NativeCodeBlockDesc NativeCodeBlockDesc;
 struct _NCBAvlNode;
 typedef struct _NCBAvlNode NCBAvlNode;
 
-struct _NativeCodeModEntry {
+struct _NativeCodeRelocEntry {
 	uint64_t spc;
-	int32_t offset;
+	uint32_t offset;
 	uint32_t flags;
 };
 
-struct _NativeCodeModEntryList{
-	NativeCodeModEntry* Head;
+struct _NativeCodeRelocList{
+	NativeCodeRelocEntry* arr;
 	uint32_t EffecSize;
 	uint32_t AllocSize;
 };
 
+typedef struct _IJTabRefEntry{
+	uint64_t spc;
+	STPC_HASH_TABLE_ENTRY* tabent;
+}IJTabRefEntry;
+
+typedef struct _IJTabRefList{
+	IJTabRefEntry* list;
+	uint32_t EffecSize;
+	uint32_t AllocSize;
+}IJTabRefList;
+
+typedef struct _RefedBlockList{
+	NativeCodeBlockDesc** list;
+	uint32_t EffecSize;
+	uint32_t AllocSize;
+}RefedBlockList;
 
 struct _NativeCodeBlockDesc {
 	struct rb_node;
 	NativeCodeBlockDesc* PreBlock;
 	NativeCodeBlockDesc* NxtBlock;
 	void* NativeCode; //XXX:should be managed manually
-	NativeCodeBlockDesc** RefedBlocks;
+	RefedBlockList RefedBlocks;
 	uint32_t NativeCodeSize;
 	uint32_t SourceCodeSize;
 	uint64_t SourceCodeBase;
-	NativeCodeModEntryList Refs;
-	NativeCodeModEntryList SpcMap;
-	uint32_t RefedBlockEffecSize;
-	uint32_t RefedBlockAllocSize;
+	NativeCodeRelocList Refs;
+	NativeCodeRelocList SpcMap;
 };
+
+void AddIndirJmpTabEntry(uint64_t spc, uint64_t tpc, NativeCodeBlockDesc* desc)
+{
+	STPC_HASH_TABLE_ENTRY* entry = (IndirJmpHashTab + SpcHashFunc(spc));
+	if((entry->spc) != spc)
+	{
+		if(entry->spc)
+		{
+
+		}
+		else
+		{
+			(entry->tpc) = tpc;
+			(entry->spc) = spc;
+		}
+	}
+
+inline uint32_t FindFirstEntryBySpc(NativeCodeRelocList list,uint64_t spc)
+{
+	uint32_t size = (list.EffecSize);
+	NativeCodeRelocEntry* head = (list.arr);
+	uint32_t i = 0;
+	if(size)
+	{
+		while(size)
+		{
+			uint64_t value = head[ i + (size/2)].spc;
+			if(value<spc)
+			{
+				i += ((size/2)+1);
+				size = ((size - 1)/2);
+			}
+			else
+			{
+				size /= 2;
+			}
+		}
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+#define RELOC_ENTRY_VALID	0x01\
+
+
+
+void RebaseNativeCodeBlock(NativeCodeBlockDesc* desc, uint64_t newbase)
+{
+	uint32_t i;
+	uint64_t offset64 = (newbase - ((uint64_t)(desc->NativeCode)));
+	for(i=0;i<(desc->RefedBlockEffecSize);i++)
+	{
+		NativeCodeBlockDesc* refer = (desc->RefedBlocks)[i];
+		NativeCodeRelocList reloclist = refer->Refs;
+		uint32_t j = FindFirstEntryBySpc(reloclist, (desc->SourceCodeBase));
+		while(j<(reloclist.EffecSize))
+		{
+			if((reloclist.arr)[j].flags & RELOC_ENTRY_VALID)
+			{
+				(*((uint64_t*)(((uint64_t)(refer->NativeCode))+((reloclist.arr)[j]).offset + 2))) += offset64;
+			}
+			j++;
+		}
+	}
+}
 
 struct _NCBAvlNode {
 	NativeCodeBlockDesc* NCBPtr;
@@ -659,9 +764,9 @@ struct _NCBAvlNode {
 
 static NCBAvlNode NCBAvlTerminator = { NULL, NULL, NULL, NULL, 0, 0};
 
-inline void __SwapMkr(NativeCodeModEntry* x, NativeCodeModEntry* y) {
+inline void __SwapMkr(NativeCodeRelocEntry* x, NativeCodeRelocEntry* y) {
 	if (x != y) {
-		NativeCodeModEntry tmp;
+		NativeCodeRelocEntry tmp;
 		tmp = *x;
 		*x = *y;
 		*y = tmp;
@@ -717,25 +822,25 @@ void __QuickSort_Type_##TYPE( TYPE *list , int32_t n ) {\
 	}\
 }
 
-__QuickSort_Prototype(NativeCodeModEntry);
+__QuickSort_Prototype(NativeCodeRelocEntry);
 
-__QuickSort_Define(NativeCodeModEntry,uint64_t,spc,__SwapMkr);
+__QuickSort_Define(NativeCodeRelocEntry,uint64_t,spc,__SwapMkr);
 
 
 
-void SortMarkerList(NativeCodeModEntryList* _list) {
-	__QuickSort(NativeCodeModEntry,_list->Head, _list->EffecSize);
+void SortMarkerList(NativeCodeRelocList* _list) {
+	__QuickSort(NativeCodeRelocEntry,_list->arr, _list->EffecSize);
 }
 
-void InsertMarkList(NativeCodeModEntryList* list, uint64_t _spc, int32_t _offset, uint32_t _flags)
+void InsertMarkList(NativeCodeRelocList* list, uint64_t _spc, int32_t _offset, uint32_t _flags)
 {
 	if((list->AllocSize)==(list->EffecSize))
 	{
-		list->Head = realloc(list->Head , list->AllocSize * 2 * sizeof(NativeCodeModEntry));
+		list->arr = realloc(list->arr , list->AllocSize * 2 * sizeof(NativeCodeRelocEntry));
 	}
-	list->Head[list->EffecSize].spc = _spc;
-	list->Head[list->EffecSize].offset = _offset;
-	list->Head[list->EffecSize].flags = _flags;
+	list->arr[list->EffecSize].spc = _spc;
+	list->arr[list->EffecSize].offset = _offset;
+	list->arr[list->EffecSize].flags = _flags;
 	list->EffecSize++;
 }
 

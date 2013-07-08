@@ -1147,6 +1147,8 @@ void TranslateAluOp(I0INSTR* instr, uint8_t** tpc, uint8_t op) {
 				{
 					if((x64_opr2->reg) == (x64_opr0->reg))
 					{
+						ZEROOUT_x64_INSTR();
+
 					}
 				}
 				else
