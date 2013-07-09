@@ -18,6 +18,8 @@ typedef void (*FuncType)(void);
 
 void test(void)
 {
+	while(1)
+	{}
 	printf("this is a function\n");
 }
 
