@@ -4,6 +4,18 @@
 #include "ASM_MACROS.h"
 #include "rbtree.h"
 
+uint8_t nop1[1] = {0x90};
+uint8_t nop2[2] = {0x66, 0x90};
+uint8_t nop3[3] = {0x0f, 0x1f, 0x00};
+uint8_t nop4[4] = {0x0f, 0x1f, 0x40, 0x00};
+uint8_t nop5[5] = {0x0f, 0x1f, 0x44, 0x00, 0x00};
+uint8_t nop6[6] = {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00};
+uint8_t nop7[7] = {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00};
+uint8_t nop8[8] = {0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
+uint8_t nop9[9] = {0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+uint8_t* MultiNopTemplate[9] = \
+{nop1, nop2, nop3, nop4, nop5, nop6, nop7, nop8, nop9};
 
 enum NATIVE_CODE_BLOCK_SIZE{
 	NATIVE_CODE_BLOCK_4K = 0,
@@ -625,15 +637,32 @@ do{\
 	{\
 		if( ((listdesc).EffecSize) >= ((4ULL*1024ULL) / sizeof(__typeof((listdesc).list[0]))))\
 		{\
-			newptr = (__typeof((listdesc).list))realloc(((listdesc).EffecSize)*sizeof(__typeof((listdesc).list[0])) + (1024ULL));\
+			newptr = (__typeof((listdesc).list))realloc(\
+				((listdesc).EffecSize) * sizeof(__typeof((listdesc).list[0]))\
+				+ ((4ULL*1024ULL)\
+				/ sizeof(__typeof((listdesc).list[0]))\
+				* sizeof(__typeof((listdesc).list[0])))\
+			);\
+			if(newptr == NULL)\
+			{\
+				exit(CRITICAL_MEM_LOW);\
+			}\
+			else\
+			{\
+				(listdesc).EffecSize += ((4ULL*1024ULL) / sizeof(__typeof((listdesc).list[0])));\
+			}\
 		}\
 		else\
 		{\
 			newptr = (__typeof((listdesc).list))realloc(((listdesc).EffecSize)*sizeof(__typeof((listdesc).list[0]))*2);\
-		}\
-		if(newptr == NULL)\
-		{\
-			exit(CRITICAL_MEM_LOW);\
+			if(newptr == NULL)\
+			{\
+				exit(CRITICAL_MEM_LOW);\
+			}\
+			else\
+			{\
+				(listdesc).EffecSize *= 2;\
+			}\
 		}\
 		(listdesc).list = newptr;\
 	}\
@@ -658,13 +687,12 @@ struct _NativeCodeRelocEntry {
 };
 
 struct _NativeCodeRelocList{
-	NativeCodeRelocEntry* arr;
+	NativeCodeRelocEntry* list;
 	uint32_t EffecSize;
 	uint32_t AllocSize;
 };
 
 typedef struct _IJTabRefEntry{
-	uint64_t spc;
 	STPC_HASH_TABLE_ENTRY* tabent;
 }IJTabRefEntry;
 
@@ -686,21 +714,50 @@ struct _NativeCodeBlockDesc {
 	NativeCodeBlockDesc* NxtBlock;
 	void* NativeCode; //XXX:should be managed manually
 	RefedBlockList RefedBlocks;
+	IJTabRefList RefedIJTab;
 	uint32_t NativeCodeSize;
 	uint32_t SourceCodeSize;
 	uint64_t SourceCodeBase;
 	NativeCodeRelocList Refs;
-	NativeCodeRelocList SpcMap;
+	uint8_t Trampoline[2+8+2];
+	uint8_t EndOfBlockDesc[0];
 };
+
+#define BLOCK_DESC_TRAM_OFFSET ((uint64_t)(&((*((NativeCodeBlockDesc*)NULL)).EndOfBlockDesc[0])))
+
+uint64_t JmpFromNativeBlock(uint64_t srcblock, uint64_t spc)
+{
+	srcblock -= (BLOCK_DESC_TRAM_OFFSET);
+	NativeCodeBlockDesc* blockdesc = (NativeCodeBlockDesc*)(srcblock);
+
+}
 
 void AddIndirJmpTabEntry(uint64_t spc, uint64_t tpc, NativeCodeBlockDesc* desc)
 {
 	STPC_HASH_TABLE_ENTRY* entry = (IndirJmpHashTab + SpcHashFunc(spc));
+	STPC_HASH_TABLE_ENTRY* i;
 	if((entry->spc) != spc)
 	{
 		if(entry->spc)
 		{
-
+			i = (entry->pnlnk)[0];
+			while(i)
+			{
+				if((i->spc) == spc)
+				{
+					return;
+				}
+			}
+			i = (STPC_HASH_TABLE_ENTRY*)malloc(SIZEOF_STPC_HASH_TABLE_CHAIN_ENTRY);
+			(i->pnlnk[0]) = (entry->pnlnk[0]);
+			(i->pnlnk[1]) = entry;
+			(entry->pnlnk[0]) = i;
+			if((i->pnlnk[0]))
+			{
+				(i->pnlnk[0])->pnlnk[1] = i;
+			}
+			(i->spc) = spc;
+			(i->tpc) = tpc;
 		}
 		else
 		{
@@ -708,17 +765,18 @@ void AddIndirJmpTabEntry(uint64_t spc, uint64_t tpc, NativeCodeBlockDesc* desc)
 			(entry->spc) = spc;
 		}
 	}
+}
 
 inline uint32_t FindFirstEntryBySpc(NativeCodeRelocList list,uint64_t spc)
 {
 	uint32_t size = (list.EffecSize);
-	NativeCodeRelocEntry* head = (list.arr);
+	NativeCodeRelocEntry* arr = (list.list);
 	uint32_t i = 0;
 	if(size)
 	{
 		while(size)
 		{
-			uint64_t value = head[ i + (size/2)].spc;
+			uint64_t value = arr[ i + (size/2)].spc;
 			if(value<spc)
 			{
 				i += ((size/2)+1);
@@ -744,19 +802,26 @@ void RebaseNativeCodeBlock(NativeCodeBlockDesc* desc, uint64_t newbase)
 {
 	uint32_t i;
 	uint64_t offset64 = (newbase - ((uint64_t)(desc->NativeCode)));
-	for(i=0;i<(desc->RefedBlockEffecSize);i++)
+	// relocate jmp addr in the blocks that referencing the current block
+	for(i=0;i<((desc->RefedBlocks).EffecSize);i++)
 	{
-		NativeCodeBlockDesc* refer = (desc->RefedBlocks)[i];
+		NativeCodeBlockDesc* refer = ((desc->RefedBlocks).list)[i];
 		NativeCodeRelocList reloclist = refer->Refs;
 		uint32_t j = FindFirstEntryBySpc(reloclist, (desc->SourceCodeBase));
 		while(j<(reloclist.EffecSize))
 		{
-			if((reloclist.arr)[j].flags & RELOC_ENTRY_VALID)
+			if((reloclist.list)[j].flags & RELOC_ENTRY_VALID)
 			{
-				(*((uint64_t*)(((uint64_t)(refer->NativeCode))+((reloclist.arr)[j]).offset + 2))) += offset64;
+				(*((uint64_t*)(((uint64_t)(refer->NativeCode))+((reloclist.list)[j]).offset))) += offset64;
 			}
 			j++;
 		}
+	}
+	// rebase the hash table entries
+	IJTabRefEntry* ijtabent = (desc->RefedIJTab).list;
+	for(i=0;i<((desc->RefedIJTab).EffecSize);i++)
+	{
+		((ijtabent[i]).tabent)->tpc += offset64;
 	}
 }
 
