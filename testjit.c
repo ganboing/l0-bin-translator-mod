@@ -16,9 +16,15 @@
 
 typedef void (*FuncType)(void);
 
-void functobecopied(void)
+void test(void)
 {
 	printf("this is a function\n");
+}
+
+void functobecopied(void)
+{
+	uint64_t funcaddr = ((uint64_t)test);
+	(*((FuncType)funcaddr))();
 	return;
 }
 
