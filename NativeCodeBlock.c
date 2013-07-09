@@ -794,8 +794,7 @@ inline uint32_t FindFirstEntryBySpc(NativeCodeRelocList list,uint64_t spc)
 	}
 }
 
-#define RELOC_ENTRY_VALID	0x01\
-
+#define RELOC_ENTRY_VALID	0x01
 
 
 void RebaseNativeCodeBlock(NativeCodeBlockDesc* desc, uint64_t newbase)

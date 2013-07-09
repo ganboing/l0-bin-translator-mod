@@ -34,6 +34,7 @@ int main()
 {
 	unsigned long pagesize = sysconf(_SC_PAGE_SIZE);
 	void* func_runtime = malloc(FUNC_SIZE);
+	printf("now alloced at %lx\n", (uint64_t)(func_runtime));
 	memcpy(func_runtime, functobecopied,FUNC_SIZE );
 	mprotect((((uint64_t)func_runtime)&(~(pagesize-1))), (FUNC_SIZE + pagesize - 1), PROT_READ | PROT_WRITE | PROT_EXEC);
 	(*((FuncType)func_runtime))();
