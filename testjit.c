@@ -12,7 +12,7 @@
 #include <string.h>
 #include <sys/mman.h>
 
-#define FUNC_SIZE 0x10
+#define FUNC_SIZE 0x40
 
 typedef void (*FuncType)(void);
 
