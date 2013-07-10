@@ -1,20 +1,24 @@
+#include <unistd.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
 #include "ASM_MACROS.h"
 #include "rbtree.h"
 
-uint8_t nop1[1] = {0x90};
-uint8_t nop2[2] = {0x66, 0x90};
-uint8_t nop3[3] = {0x0f, 0x1f, 0x00};
-uint8_t nop4[4] = {0x0f, 0x1f, 0x40, 0x00};
-uint8_t nop5[5] = {0x0f, 0x1f, 0x44, 0x00, 0x00};
-uint8_t nop6[6] = {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00};
-uint8_t nop7[7] = {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00};
-uint8_t nop8[8] = {0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
-uint8_t nop9[9] = {0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-uint8_t* MultiNopTemplate[9] = \
+const uint8_t nop1[1] = {0x90};
+const uint8_t nop2[2] = {0x66, 0x90};
+const uint8_t nop3[3] = {0x0f, 0x1f, 0x00};
+const uint8_t nop4[4] = {0x0f, 0x1f, 0x40, 0x00};
+const uint8_t nop5[5] = {0x0f, 0x1f, 0x44, 0x00, 0x00};
+const uint8_t nop6[6] = {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00};
+const uint8_t nop7[7] = {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00};
+const uint8_t nop8[8] = {0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
+const uint8_t nop9[9] = {0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+const uint8_t*  const MultiNopTemplate[9] = \
 {nop1, nop2, nop3, nop4, nop5, nop6, nop7, nop8, nop9};
 
 enum NATIVE_CODE_BLOCK_SIZE{
@@ -600,6 +604,16 @@ void NativeCodePoolFree(void* poolptr)
 	(*(NativeCodePoolFreeSize[pooloffset/((1ULL)<<(28ULL))]))(pooloffset%((1ULL)<<(28ULL)));
 }
 
+void* malloc_executable(size_t size)
+{
+	static unsigned long pagesize = sysconf(_SC_PAGE_SIZE);
+	uint64_t addr;
+	void* ptr = malloc(size);
+	addr = ((uint64_t)ptr);
+	mprotect((addr & (~(pagesize - 1))), ((uint64_t)(size)) + (addr & (pagesize - 1)), PROT_READ | PROT_WRITE | PROT_EXEC);
+	return ptr;
+}
+
 #ifndef offsetof
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
 #endif
@@ -668,8 +682,8 @@ do{\
 	}\
 }while(0)
 
-struct _NativeCodeRelocEntry;
-typedef struct _NativeCodeRelocEntry NativeCodeRelocEntry;
+union _NativeCodeRelocEntry;
+typedef union _NativeCodeRelocEntry NativeCodeRelocEntry;
 
 struct _NativeCodeRelocList;
 typedef struct _NativeCodeRelocList NativeCodeRelocList;
@@ -680,10 +694,45 @@ typedef struct _NativeCodeBlockDesc NativeCodeBlockDesc;
 struct _NCBAvlNode;
 typedef struct _NCBAvlNode NCBAvlNode;
 
-struct _NativeCodeRelocEntry {
-	uint64_t spc;
-	uint32_t offset;
-	uint32_t flags;
+struct _NativeCodeRelocRealEntry;
+typedef struct _NativeCodeRelocRealEntry NativeCodeRelocRealEntry;
+
+struct _NativeCodeRelocHeader;
+typedef struct _NativeCodeRelocHeader NativeCodeRelocHeader;
+
+struct 
+#ifndef MSVC 
+__attribute__ ((aligned(4),packed))  
+#endif
+_NativeCodeRelocRealEntry {
+	uint32_t native_offset;
+	uint8_t pad1;
+	uint8_t mov_rsi_op[2]; //0x48 0xbe movq imm64, %rsi
+	uint64_t i0_addr;
+	uint8_t jmp_op; // 0xe9 jmp rel32
+	uint32_t rel32;
+};
+
+struct
+#ifndef MSVC
+__attribute__ ((aligned(4),packed))  
+#endif
+_NativeCodeRelocHeader{
+	uint8_t mov_rdi_op[2]; //0x48 0xbf movq imm64, %rdi
+	uint64_t NC_desc_ptr;
+	uint8_t mov_eax_op; // 0xb8 movl imm32, %eax
+	uint32_t func_ptr;
+	uint8_t call_rax_op[2]; //0xff 0xd0
+	uint8_t padding[3];
+};
+
+union
+#ifndef MSVC 
+__attribute__ ((aligned(4),packed))  
+#endif
+_NativeCodeRelocEntry{
+	NativeCodeRelocRealEntry realentry;
+	NativeCodeRelocHeader header;
 };
 
 struct _NativeCodeRelocList{
@@ -725,7 +774,7 @@ struct _NativeCodeBlockDesc {
 
 #define BLOCK_DESC_TRAM_OFFSET ((uint64_t)(&((*((NativeCodeBlockDesc*)NULL)).EndOfBlockDesc[0])))
 
-uint64_t JmpFromNativeBlock(uint64_t srcblock, uint64_t spc)
+uint64_t JmpFromNativeBlock(uint64_t srcblock, uint64_t spc, uint64_t tpc)
 {
 	srcblock -= (BLOCK_DESC_TRAM_OFFSET);
 	NativeCodeBlockDesc* blockdesc = (NativeCodeBlockDesc*)(srcblock);

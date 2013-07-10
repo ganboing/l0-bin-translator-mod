@@ -18,8 +18,7 @@ jmpq *%rax
 
 .global JmpFromNativeBlock_Thunk
 JmpFromNativeBlock_Thunk:
-popq %rdi
-popq %rsi
+popq %rdx
 pushq %rcx
 pushq %r8
 pushq %r9
