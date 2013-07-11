@@ -265,3 +265,15 @@ void _quicksort_mod (void *const pbase, size_t total_elems, size_t size,
       }
   }
 }
+
+int cmp_int(int* a, int* b)
+{
+	return ((*a) - (*b));
+}
+
+int arr[100];
+
+void test(void)
+{
+	_quicksort_mod(arr,100, sizeof(int),cmp_int,0);
+}
