@@ -104,7 +104,7 @@ typedef struct
 
 typedef int (*__compar_d_fn_t) (__const void *, __const void *);
 
-void _quicksort (void *const pbase, size_t total_elems, size_t size,
+void _quicksort_mod (void *const pbase, size_t total_elems, size_t size,
 	    __compar_d_fn_t cmp, swap_ele_func_t swap_func)
 {
   register char *base_ptr = (char *) pbase;
