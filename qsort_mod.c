@@ -138,13 +138,13 @@ void _quicksort_mod (void *const pbase, size_t total_elems, size_t size,
 	  char *mid = lo + size * ((hi - lo) / size >> 1);
 
 	  if ((*cmp) ((void *) mid, (void *) lo) < 0)
-		  SwapElement (mid, lo, size);
+		  SwapElement (mid, lo, size, swap_func);
 	  if ((*cmp) ((void *) hi, (void *) mid) < 0)
-		  SwapElement (mid, hi, size);
+		  SwapElement (mid, hi, size, swap_func);
 	  else
 	    goto jump_over;
 	  if ((*cmp) ((void *) mid, (void *) lo) < 0)
-		  SwapElement (mid, lo, size);
+		  SwapElement (mid, lo, size, swap_func);
 	jump_over:;
 
 	  left_ptr  = lo + size;
@@ -163,7 +163,7 @@ void _quicksort_mod (void *const pbase, size_t total_elems, size_t size,
 
 	      if (left_ptr < right_ptr)
 		{
-	    	  SwapElement (left_ptr, right_ptr, size);
+	    	  SwapElement (left_ptr, right_ptr, size, swap_func);
 		  if (mid == left_ptr)
 		    mid = right_ptr;
 		  else if (mid == right_ptr)
@@ -235,7 +235,7 @@ void _quicksort_mod (void *const pbase, size_t total_elems, size_t size,
         tmp_ptr = run_ptr;
 
     if (tmp_ptr != base_ptr)
-    	SwapElement (tmp_ptr, base_ptr, size);
+    	SwapElement (tmp_ptr, base_ptr, size, swap_func);
 
     /* Insertion sort, running from left-hand-side up to right-hand-side.  */
 
