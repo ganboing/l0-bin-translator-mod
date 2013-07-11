@@ -757,8 +757,12 @@ typedef struct _RefedBlockList{
 	uint32_t AllocSize;
 }RefedBlockList;
 
+struct rb_root GlobalNCDescRbRoot;
+NativeCodeBlockDesc* GlobalNCDescFirst;
+NativeCodeBlockDesc* GlobalNCDescLast;
+
 struct _NativeCodeBlockDesc {
-	struct rb_node;
+	struct rb_node DescRbNode;
 	NativeCodeBlockDesc* PreBlock;
 	NativeCodeBlockDesc* NxtBlock;
 	void* NativeCode; //XXX:should be managed manually
@@ -772,7 +776,29 @@ struct _NativeCodeBlockDesc {
 	uint8_t EndOfBlockDesc[0];
 };
 
+#ifndef offsetof
+#define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
+#endif
+
+#ifndef container_of
+#define container_of(ptr, type, member) ({			\
+	const typeof(((type *)0)->member) * __mptr = (ptr);	\
+	(type *)((char *)__mptr - offsetof(type, member)); })
+#endif
+
 #define BLOCK_DESC_TRAM_OFFSET ((uint64_t)(&((*((NativeCodeBlockDesc*)NULL)).EndOfBlockDesc[0])))
+
+
+NativeCodeBlockDesc* FindTargetBlock(uint64_t spc)
+{
+	struct rb_node* root = GlobalNCDescRbRoot.rb_node;
+	while(root)
+	{
+		NativeCodeBlockDesc* ncblock = container_of(root, NativeCodeBlockDesc, DescRbNode);
+		if(
+	}
+	return root;
+}
 
 uint64_t JmpFromNativeBlock(uint64_t srcblock, uint64_t spc, uint64_t tpc)
 {
@@ -818,14 +844,14 @@ void AddIndirJmpTabEntry(uint64_t spc, uint64_t tpc, NativeCodeBlockDesc* desc)
 
 inline uint32_t FindFirstEntryBySpc(NativeCodeRelocList list,uint64_t spc)
 {
-	uint32_t size = (list.EffecSize);
-	NativeCodeRelocEntry* arr = (list.list);
+	uint32_t size = (list.EffecSize) - 1;
+	NativeCodeRelocEntry* arr = ((list.list) + 1);
 	uint32_t i = 0;
 	if(size)
 	{
 		while(size)
 		{
-			uint64_t value = arr[ i + (size/2)].spc;
+			uint64_t value = arr[ i + (size/2)].realentry.i0_addr;
 			if(value<spc)
 			{
 				i += ((size/2)+1);
@@ -836,6 +862,7 @@ inline uint32_t FindFirstEntryBySpc(NativeCodeRelocList list,uint64_t spc)
 				size /= 2;
 			}
 		}
+		return (i+1);
 	}
 	else
 	{
@@ -848,6 +875,7 @@ inline uint32_t FindFirstEntryBySpc(NativeCodeRelocList list,uint64_t spc)
 
 void RebaseNativeCodeBlock(NativeCodeBlockDesc* desc, uint64_t newbase)
 {
+	uint64_t nativecodelimit = (((uint64_t)(desc->NativeCode)) + (desc->NativeCodeSize));
 	uint32_t i;
 	uint64_t offset64 = (newbase - ((uint64_t)(desc->NativeCode)));
 	// relocate jmp addr in the blocks that referencing the current block
@@ -856,13 +884,21 @@ void RebaseNativeCodeBlock(NativeCodeBlockDesc* desc, uint64_t newbase)
 		NativeCodeBlockDesc* refer = ((desc->RefedBlocks).list)[i];
 		NativeCodeRelocList reloclist = refer->Refs;
 		uint32_t j = FindFirstEntryBySpc(reloclist, (desc->SourceCodeBase));
-		while(j<(reloclist.EffecSize))
+		while((j<(reloclist.EffecSize)))
 		{
-			if((reloclist.list)[j].flags & RELOC_ENTRY_VALID)
+			if((reloclist.list)[j].realentry.i0_addr < nativecodelimit)
 			{
-				(*((uint64_t*)(((uint64_t)(refer->NativeCode))+((reloclist.list)[j]).offset))) += offset64;
+				uint8_t* reloc_point = (uint8_t*)(((uint64_t)(refer->NativeCode)) + (reloclist.list)[j].realentry.native_offset);
+				if(((*reloc_point) == 0x48) && ((*(reloc_point + 1)) == 0xb8) && ((*(reloc_point + 11)) == 0xe0))
+				{
+					(*((uint64_t*)(reloc_point + 2))) += offset64;
+				}
+				j++;
 			}
-			j++;
+			else
+			{
+				break;
+			}
 		}
 	}
 	// rebase the hash table entries
