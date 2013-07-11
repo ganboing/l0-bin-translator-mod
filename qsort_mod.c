@@ -266,8 +266,10 @@ void _quicksort_mod (void *const pbase, size_t total_elems, size_t size,
   }
 }
 
-int cmp_int(int* a, int* b)
+int cmp_int(void* _a, void* _b)
 {
+	int* a = (int*)_a;
+	int* b = (int*)_b;
 	return ((*a) - (*b));
 }
 
