@@ -726,6 +726,57 @@ _NativeCodeRelocHeader{
 	uint8_t padding[3];
 };
 
+void __swap_NativeCodeRelocRealEntry(NativeCodeRelocRealEntry* a, NativeCodeRelocRealEntry* b)
+{
+	uint32_t tmp_native_offset;
+	uint64_t tmp_i0_addr;
+	tmp_native_offset = a->native_offset;
+	a->native_offset = b->native_offset;
+	b->native_offset = tmp_native_offset;
+	tmp_i0_addr = a->i0_addr;
+	a->i0_addr = b->i0_addr;
+	b->i0_addr = tmp_i0_addr;
+}
+
+typedef struct _TempRelocEntry{
+	struct rb_node tree_node;
+	uint64_t i0_addr;
+	uint64_t native_addr;
+	struct _TempRelocEntry* prev;
+	struct _TempRelocEntry* next;
+}TempRelocEntry;
+
+TempRelocEntry TransTimeTempRelocList[1024*1024];
+unsigned int TransTimeRLCnt;
+TempRelocEntry* TransTimeRLHead;
+TempRelocEntry* TransTimeRLHead;
+struct rb_root TransTimeRLTreeRoot;
+
+void InitTempRelocList(void)
+{
+	TransTimeRLTreeRoot.rb_node = NULL;
+	TransTimeRLCnt = 0;
+	TransTimeRLHead = TransTimeRLHead = NULL;
+}
+
+
+
+int __cmp_NativeCodeRelocRealEntry(NativeCodeRelocRealEntry* a, NativeCodeRelocRealEntry* b)
+{
+	if((a->i0_addr) != (b->i0_addr))
+	{
+		if((a->i0_addr) < (b->i0_addr))
+		{
+			return -1;
+		}
+		else
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+
 union
 #ifndef MSVC 
 __attribute__ ((aligned(4),packed))  
