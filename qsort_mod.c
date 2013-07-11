@@ -102,7 +102,7 @@ typedef struct
       smaller partition.  This *guarantees* no more than log (total_elems)
       stack size is needed (actually O(1) in this case)!  */
 
-typedef int (*__compar_d_fn_t) (__const void *, __const void *);
+typedef int (*__compar_d_fn_t) (void *, void *);
 
 void _quicksort_mod (void *const pbase, size_t total_elems, size_t size,
 	    __compar_d_fn_t cmp, swap_ele_func_t swap_func)
