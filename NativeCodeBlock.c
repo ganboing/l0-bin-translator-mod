@@ -3,10 +3,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
+#include <assert.h>
 #include <sys/mman.h>
 #include "ASM_MACROS.h"
 #include "rbtree.h"
 #include "DecodeI0.h"
+#include "NativeCodeBlock.h"
 
 #ifndef offsetof
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
@@ -18,39 +21,28 @@
 	(type *)((char *)__mptr - offsetof(type, member)); })
 #endif
 
-const uint8_t nop1[1] = {0x90};
-const uint8_t nop2[2] = {0x66, 0x90};
-const uint8_t nop3[3] = {0x0f, 0x1f, 0x00};
-const uint8_t nop4[4] = {0x0f, 0x1f, 0x40, 0x00};
-const uint8_t nop5[5] = {0x0f, 0x1f, 0x44, 0x00, 0x00};
-const uint8_t nop6[6] = {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00};
-const uint8_t nop7[7] = {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00};
-const uint8_t nop8[8] = {0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
-const uint8_t nop9[9] = {0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
+static const uint8_t nop1[1] = {0x90};
+static const uint8_t nop2[2] = {0x66, 0x90};
+static const uint8_t nop3[3] = {0x0f, 0x1f, 0x00};
+static const uint8_t nop4[4] = {0x0f, 0x1f, 0x40, 0x00};
+static const uint8_t nop5[5] = {0x0f, 0x1f, 0x44, 0x00, 0x00};
+static const uint8_t nop6[6] = {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00};
+static const uint8_t nop7[7] = {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00};
+static const uint8_t nop8[8] = {0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
+static const uint8_t nop9[9] = {0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-const uint8_t*  const MultiNopTemplate[9] = \
+static const uint8_t*  const MultiNopTemplate[9] = \
 {nop1, nop2, nop3, nop4, nop5, nop6, nop7, nop8, nop9};
 
+static const uint16_t mov_imm_rax_op = 0xb848;
+static const uint16_t jmp_rax_op = 0xe0ff;
+static const uint16_t call_rax_op = 0xd0ff;
 
-
-void* malloc_executable(size_t size)
-{
-	static unsigned long pagesize = sysconf(_SC_PAGE_SIZE);
-	uint64_t addr;
-	void* ptr = malloc(size);
-	addr = ((uint64_t)ptr);
-	mprotect((addr & (~(pagesize - 1))), ((uint64_t)(size)) + (addr & (pagesize - 1)), PROT_READ | PROT_WRITE | PROT_EXEC);
-	return ptr;
-}
-
-typedef struct _STPC_HASH_TABLE_ENTRY STPC_HASH_TABLE_ENTRY;
-
-struct _STPC_HASH_TABLE_ENTRY
-{
-	uint64_t spc;
-	uint64_t tpc;
-	STPC_HASH_TABLE_ENTRY* pnlnk[1];
-};
+//Translate time working area
+static TempRelocEntry TransTimeTempRelocList[1024*1024];
+static unsigned int TransTimeRLCnt;
+static TempRelocEntry* TransTimeRLHead;
+static struct rb_root TransTimeRLTreeRoot;
 
 #define IJ_TABLE_SIZE 0x4000
 
@@ -58,10 +50,6 @@ STPC_HASH_TABLE_ENTRY IndirJmpHashTab[IJ_TABLE_SIZE];
 
 #define SIZEOF_STPC_HASH_TABLE_CHAIN_ENTRY ((sizeof(STPC_HASH_TABLE_ENTRY))+sizeof(STPC_HASH_TABLE_ENTRY*))
 
-inline uint32_t SpcHashFunc(uint64_t spc)
-{
-	return (spc & (IJ_TABLE_SIZE - 1));
-}
 
 #define CRITICAL_MEM_LOW 0x02
 
@@ -103,49 +91,21 @@ do{\
 	}\
 }while(0)
 
-union _NativeCodeRelocEntry;
-typedef union _NativeCodeRelocEntry NativeCodeRelocEntry;
 
-struct _NativeCodeRelocList;
-typedef struct _NativeCodeRelocList NativeCodeRelocList;
+void* malloc_executable(size_t size)
+{
+	static unsigned long pagesize = sysconf(_SC_PAGE_SIZE);
+	uint64_t addr;
+	void* ptr = malloc(size);
+	addr = ((uint64_t)ptr);
+	mprotect((addr & (~(pagesize - 1))), ((uint64_t)(size)) + (addr & (pagesize - 1)), PROT_READ | PROT_WRITE | PROT_EXEC);
+	return ptr;
+}
 
-struct _NativeCodeBlockDesc;
-typedef struct _NativeCodeBlockDesc NativeCodeBlockDesc;
-
-struct _NCBAvlNode;
-typedef struct _NCBAvlNode NCBAvlNode;
-
-struct _NativeCodeRelocRealEntry;
-typedef struct _NativeCodeRelocRealEntry NativeCodeRelocRealEntry;
-
-struct _NativeCodeRelocHeader;
-typedef struct _NativeCodeRelocHeader NativeCodeRelocHeader;
-
-struct 
-#ifndef MSVC 
-__attribute__ ((aligned(4),packed))  
-#endif
-_NativeCodeRelocRealEntry {
-	uint32_t native_offset;
-	uint8_t pad1;
-	uint8_t mov_rsi_op[2]; //0x48 0xbe movq imm64, %rsi
-	uint64_t i0_addr;
-	uint8_t jmp_op; // 0xe9 jmp rel32
-	uint32_t rel32;
-};
-
-struct
-#ifndef MSVC
-__attribute__ ((aligned(4),packed))  
-#endif
-_NativeCodeRelocHeader{
-	uint8_t mov_rdi_op[2]; //0x48 0xbf movq imm64, %rdi
-	uint64_t NC_desc_ptr;
-	uint8_t mov_eax_op; // 0xb8 movl imm32, %eax
-	uint32_t func_ptr;
-	uint8_t call_rax_op[2]; //0xff 0xd0
-	uint8_t padding[3];
-};
+inline uint32_t SpcHashFunc(uint64_t spc)
+{
+	return (spc & (IJ_TABLE_SIZE - 1));
+}
 
 void __swap_NativeCodeRelocRealEntry(NativeCodeRelocRealEntry* a, NativeCodeRelocRealEntry* b)
 {
@@ -158,19 +118,6 @@ void __swap_NativeCodeRelocRealEntry(NativeCodeRelocRealEntry* a, NativeCodeRelo
 	a->i0_addr = b->i0_addr;
 	b->i0_addr = tmp_i0_addr;
 }
-
-typedef struct _TempRelocEntry{
-	struct rb_node tree_node;
-	uint64_t i0_addr;
-	uint64_t native_addr;
-	struct _TempRelocEntry* prev;
-	struct _TempRelocEntry* next;
-}TempRelocEntry;
-
-TempRelocEntry TransTimeTempRelocList[1024*1024];
-unsigned int TransTimeRLCnt;
-TempRelocEntry* TransTimeRLHead;
-struct rb_root TransTimeRLTreeRoot;
 
 void InitTempRelocList(void)
 {
@@ -255,58 +202,86 @@ int __cmp_NativeCodeRelocRealEntry(NativeCodeRelocRealEntry* a, NativeCodeRelocR
 	return 0;
 }
 
-union
-#ifndef MSVC 
-__attribute__ ((aligned(4),packed))  
-#endif
-_NativeCodeRelocEntry{
-	NativeCodeRelocRealEntry realentry;
-	NativeCodeRelocHeader header;
-};
+void ResolveExternalDeleting(NativeCodeBlockDesc* block, NativeCodeBlockDesc* block_to_be_delete)
+{
+	struct rb_node* ref_set_root = (block->RefedBlocks.tree_root.rb_node);
+	while(ref_set_root)
+	{
+		NativeCodeRefNode* ref_node = container_of(ref_set_root, NativeCodeRefNode, tree_node);
+		NativeCodeBlockDesc* ref_block = (ref_node->block_ptr);
+		if(((uint64_t)ref_block) == ((uint64_t)block_to_be_delete))
+		{
+			rb_erase(ref_set_root, (&(block->RefedBlocks.tree_root)));
+			free(ref_set_root);
+		}
+		else
+		{
+			if(((uint64_t)ref_block) < ((uint64_t)block_to_be_delete))
+			{
+				ref_set_root = (ref_set_root->rb_right);
+			}
+			else
+			{
+				ref_set_root = (ref_set_root->rb_left);
+			}
+		}
+	}
+	uint32_t reloc_pos = FindFirstEntryBySpc(block->Relocs, block_to_be_delete->SourceCodeBase);
+	while( reloc_pos < (block->Relocs.EffecSize))
+	{
+		if(((block->Relocs.list)[reloc_pos].realentry.i0_addr) < ((block_to_be_delete->SourceCodeBase) + (block_to_be_delete->SourceCodeSize)))
+		{
+			NativeCodeRelocPoint* reloc_point  = (NativeCodeRelocPoint*)(((uint64_t)block->NativeCode) + ((block->Relocs.list)[reloc_pos].realentry.native_offset));
+			if((reloc_point->mov_op) != mov_imm_rax_op)
+			{
+				(reloc_point->jmp_call_op) = call_rax_op;
+				(reloc_point->target) = ((uint64_t)(&((block->Relocs.list)[reloc_pos].realentry.mov_rsi_op)));
+				(reloc_point->mov_op) = mov_imm_rax_op;
+			}
+			else
+			{
+				if((reloc_point->jmp_call_op) != call_rax_op)
+				{
+					(reloc_point->jmp_call_op) = call_rax_op;
+				}
+			}
+		}
+		reloc_pos++;
+	}
+}
 
-struct _NativeCodeRelocList{
-	NativeCodeRelocEntry* list;
-	uint32_t EffecSize;
-	uint32_t AllocSize;
-};
+void TraverRefBlockPrepDel(NativeCodeBlockDesc* block_to_be_delete)
+{
+	NativeCodeRefSet ref_set = block_to_be_delete->RefedBlocks;
+	struct rb_node* node_st[64];
+	uint32_t sp = 0;
+	struct rb_node* node_root = ref_set.tree_root.rb_node;
+	while(1)
+	{
+		if(node_root)
+		{
+			NativeCodeRefNode* ref_node = container_of(node_root, NativeCodeRefNode, treenode);
+			node_st[sp++] = (node_root->rb_left);
+			struct rb_node* next_root = (node_root->rb_right);
+			ResolveExternalDeleting(ref_node->block_ptr, block_to_be_delete);
+			free(ref_node);
+			node_root = next_root;
+		}
+		else
+		{
+			if(sp)
+			{
+				node_root = node_st[--sp];
+			}
+			else
+			{
+				return;
+			}
+		}
+	}
+}
 
-typedef struct _IJTabRefEntry{
-	STPC_HASH_TABLE_ENTRY* tabent;
-}IJTabRefEntry;
-
-typedef struct _IJTabRefList{
-	IJTabRefEntry* list;
-	uint32_t EffecSize;
-	uint32_t AllocSize;
-}IJTabRefList;
-
-typedef struct _RefedBlockList{
-	NativeCodeBlockDesc** list;
-	uint32_t EffecSize;
-	uint32_t AllocSize;
-}RefedBlockList;
-
-struct rb_root GlobalNCDescRbRoot;
-NativeCodeBlockDesc* GlobalNCDescFirst;
-NativeCodeBlockDesc* GlobalNCDescLast;
-
-struct _NativeCodeBlockDesc {
-	struct rb_node DescRbNode;
-	NativeCodeBlockDesc* PreBlock;
-	NativeCodeBlockDesc* NxtBlock;
-	void* NativeCode; //XXX:should be managed manually
-	RefedBlockList RefedBlocks;
-	IJTabRefList RefedIJTab;
-	uint32_t NativeCodeSize;
-	uint32_t SourceCodeSize;
-	uint64_t SourceCodeBase;
-	NativeCodeRelocList Refs;
-	uint8_t Trampoline[2+8+2];
-	uint8_t EndOfBlockDesc[0];
-};
-
-
-#define BLOCK_DESC_TRAM_OFFSET ((uint64_t)(&((*((NativeCodeBlockDesc*)NULL)).EndOfBlockDesc[0])))
+//#define BLOCK_DESC_TRAM_OFFSET ((uint64_t)(&((*((NativeCodeBlockDesc*)NULL)).EndOfBlockDesc[0])))
 
 void InsertNativeCodeBlock(NativeCodeBlockDesc* newblock)
 {
@@ -409,13 +384,92 @@ NativeCodeBlockDesc* FindTargetBlock(uint64_t spc)
 	}
 }
 
-uint64_t FakeStepI0(uint64_t i0_addr)
+uint64_t FakeStepI0(uint64_t* i0_addr, uint64_t* native_addr)
 {
-	uint64_t spc = i0_addr;
-	TranslateI0ToNative();
+	TranslateI0ToNative((uint8_t**)i0_addr,(uint8_t**)native_addr,(uint8_t*)ULLONG_MAX,(uint8_t*)ULLONG_MAX,0);
 }
 
-uint64_t Translate(uint64_t spc, NativeCodeBlockDesc* from_block)
+int FindRefedBlockByDesc(RefedBlockList list,NativeCodeBlockDesc* block)
+{
+	uint32_t size = list.EffecSize;
+	uint32_t i = 0;
+	while(size)
+	{
+
+	}
+	return 0;
+}
+
+void DeleteNativeCodeBlock(NativeCodeBlockDesc* block)
+{
+	TraverRefBlockPrepDel(block);
+	//remove from hash table
+	uint32_t i;
+	for(i=0;i<(block->RefedIJTab.EffecSize);i++)
+	{
+		STPC_HASH_TABLE_ENTRY* tab_ent = (block->RefedIJTab.list)[i].tabent;
+		if( (((uint64_t)tab_ent) >= ((uint64_t)IndirJmpHashTab)) && (((uint64_t)tab_ent) < (((uint64_t)IndirJmpHashTab) + sizeof(IndirJmpHashTab))))
+		{
+			(tab_ent->spc) = 0;
+		}
+		else
+		{
+			((tab_ent->pnlnk[1])->pnlnk[0]) = (tab_ent->pnlnk[0]);
+			if(tab_ent->pnlnk[0])
+			{
+				((tab_ent->pnlnk[0])->pnlnk[1]) = (tab_ent->pnlnk[1]);
+			}
+			free(tab_ent);
+		}
+	}
+	free(block->RefedIJTab.list);
+	free(block->Part.list);
+	for(i=1;i<(block->Relocs.EffecSize);i++)
+	{
+		NativeCodeRelocRealEntry* reloc_ent ;
+		NativeCodeRelocPoint* reloc_point ; 
+		while( 1 )
+		{
+			reloc_ent = (&(block->Relocs.list)[i].realentry);
+			assert((reloc_ent->native_offset) < (block->NativeCodeSize));
+			reloc_point = ((NativeCodeRelocPoint*)(((uint64_t)(block->NativeCode)) + (reloc_ent->native_offset)));
+			if(((reloc_point->jmp_call_op) == call_rax_op)  || (i==(block->Relocs.EffecSize)))
+			{
+				break;
+			}
+			assert((reloc_point->jmp_call_op) == jmp_rax_op);
+			i++;
+		};
+		if( i == (block->Relocs.EffecSize))
+		{
+			break;
+		}
+		NativeCodeBlockDesc* target_block = FindTargetBlock(reloc_ent->i0_addr);
+		assert(target_block);
+		assert((reloc_ent->i0_addr) < ((target_block->SourceCodeBase) + (target_block->SourceCodeSize)));
+		do{
+				if((reloc_point->target) >= ((uint64_t)(target_block->NativeCode))) && \
+					((reloc_point->target) < (((uint64_t)(target_block->NativeCode)) + (target_block->NativeCodeSize))))
+		}
+		
+		
+		if( (target_block) && \
+			 && \
+			((reloc_point->target) >= ((uint64_t)(target_block->NativeCode))) && \
+			((reloc_point->target) < (((uint64_t)(target_block->NativeCode)) + (target_block->NativeCodeSize))))
+		{
+			while(
+		}
+		else
+		{
+			error("relocation point invalid");
+		}
+	}
+	free(block->NativeCode);
+
+}
+
+uint64_t Translate(uint64_t spc, NativeCodeBlockDesc* from_block, NativeCodeRelocPoint* reloc_point)
 {
 	NativeCodeBlockDesc* preblock = FindTargetBlock(spc);
 	NativeCodeBlockDesc* nxtblock ;
@@ -424,7 +478,40 @@ uint64_t Translate(uint64_t spc, NativeCodeBlockDesc* from_block)
 		if(spc<((preblock->SourceCodeBase) + (preblock->SourceCodeSize)))
 		//jmp to a existing code block
 		{
+			uint32_t i0_offset = (spc - (preblock->SourceCodeBase));
+			NativeCodePartitionList part_list = preblock->Part;
+			NativeCodePartitionEntry part_ent = FindNCPartitionBySpc(part_list, i0_offset);
+			uint64_t i0_addr = (preblock->SourceCodeBase) + part_ent.i0_offset;
+			uint64_t native_addr = ((uint64_t)(preblock->NativeCode)) + part_ent.native_offset;
+			while(i0_addr < spc)
+			{
+				FakeStepI0(&i0_addr, &native_addr);
+			}
+			if(i0_addr != spc)
+			{
 
+				//!!! preblock translated some tricky code or data, kill the preblock
+			}
+			else
+			{
+				if(preblock == from_block)
+				{
+					error("jump to self native code block, buggy code\n");
+				}
+				else
+				{
+					if((reloc_point->jmp_call_op) != call_rax_op)
+					{
+						error("relocation point invalid!");
+					}
+					else
+					{
+						(reloc_point->jmp_call_op) = jmp_rax_op;
+						(reloc_point->target) = native_addr;
+						return ((uint64_t)native_addr);
+					}
+				}
+			}
 		}
 		nxtblock = preblock->NxtBlock;
 	}
@@ -477,13 +564,48 @@ void AddIndirJmpTabEntry(uint64_t spc, uint64_t tpc, NativeCodeBlockDesc* desc)
 	}
 }
 
-inline uint32_t FindFirstEntryBySpc(NativeCodeRelocList list,uint64_t spc)
+inline NativeCodePartitionEntry FindNCPartitionBySpc(NativeCodePartitionList list, uint32_t i0_offset)
 {
-	uint32_t size = (list.EffecSize) - 1;
-	NativeCodeRelocEntry* arr = ((list.list) + 1);
+	uint32_t size = (list.EffecSize);
 	uint32_t i = 0;
+	NativeCodePartitionEntry result0 = {0,0};
 	if(size)
 	{
+		while(size)
+		{
+			uint32_t value = list.list[ i + (size/2)].i0_offset;
+			if(value<=i0_offset)
+			{
+				i += ((size/2)+1);
+				size = ((size-1)/2);
+			}
+			else
+			{
+				size /= 2;
+			}
+		}
+		if(i)
+		{
+			return list.list[i-1];
+		}
+		else
+		{
+			return result0;
+		}
+	}
+	else
+	{
+		return result0;
+	}
+}
+
+inline uint32_t FindFirstEntryBySpc(NativeCodeRelocList list,uint64_t spc)
+{
+	if((list.list))
+	{
+		uint32_t size = (list.EffecSize) - 1;
+		NativeCodeRelocEntry* arr = ((list.list) + 1);
+		uint32_t i = 0;
 		while(size)
 		{
 			uint64_t value = arr[ i + (size/2)].realentry.i0_addr;
@@ -517,7 +639,7 @@ void RebaseNativeCodeBlock(NativeCodeBlockDesc* desc, uint64_t newbase)
 	for(i=0;i<((desc->RefedBlocks).EffecSize);i++)
 	{
 		NativeCodeBlockDesc* refer = ((desc->RefedBlocks).list)[i];
-		NativeCodeRelocList reloclist = refer->Refs;
+		NativeCodeRelocList reloclist = refer->Relocs;
 		uint32_t j = FindFirstEntryBySpc(reloclist, (desc->SourceCodeBase));
 		while((j<(reloclist.EffecSize)))
 		{
