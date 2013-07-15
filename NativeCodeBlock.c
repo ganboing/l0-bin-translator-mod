@@ -211,7 +211,7 @@ void DeleteFromRefSet(NativeCodeBlockDesc* ref_to_be_deleted, NativeCodeBlockDes
 	struct rb_node* ref_set_root = (block->RefedBlocks.tree_root.rb_node);
 	while(ref_set_root)
 	{
-		NativeCodeRefNode* ref_node = container_of(ref_set_root, NativeCodeRefNode, tree_node);
+		NativeCodeRefNode* ref_node = container_of(ref_set_root, NativeCodeRefNode, treenode);
 		NativeCodeBlockDesc* ref_block = (ref_node->block_ptr);
 		if(((uint64_t)ref_block) == ((uint64_t)ref_to_be_deleted))
 		{

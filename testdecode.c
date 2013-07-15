@@ -763,7 +763,8 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 	}
 	instr.addr = (uint64_t) (*spc);
 	GET_INST_FIELD_ZO(instr.opcode, op, BIT_LEN_ADDR_SIZE_MODE+BIT_LEN_OPCODE);
-
+	(instr.addr_size_mode) = ((instr.opcode)>>(BIT_LEN_OPCODE));
+	(instr.opcode) &= ((1<<(BIT_LEN_OPCODE))-1);
 	if (is_write) {
 		switch (instr.opcode) {
 		case OP_NOP:

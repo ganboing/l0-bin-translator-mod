@@ -779,6 +779,34 @@ static __inline int FindMemOperandFromCache(uint64_t addr,x64_OPR* M, MEM_CACHE_
 		}\
 	}while(0)
 
+#define IDT_BASE 0x0
+
+void TranslateINT(I0INSTR* i0instr, x64INSTR* x64instrs, uint32_t* _x64_ins_cnt)
+{
+	unsigned int instr_cnt = 0;
+	x64_OPR x64oprs_tmp[4];
+	x64oprs_tmp[0].type = x64_OPR_I;
+	x64oprs_tmp[0].imm.v64 = IDT_BASE;
+	x64oprs_tmp[1].type = x64_OPR_I;
+	x64oprs_tmp[1].imm.v64 = (i0instr->opr[0].val.v64);
+	x64oprs_tmp[2].type = x64_OPR_TYPE_REG;
+	x64oprs_tmp[2].reg = x64_AX;
+	x64oprs_tmp[3].type = x64_OPR_TYPE_REG;
+	x64oprs_tmp[3].reg = x64_DX;
+	ZEROOUT_x64_INSTR();
+	x64EncodeMovGI(x64instrs+(instr_cnt++), x64oprs_tmp[3],x64oprs_tmp[0],TYPE_ID_QWORD);
+	ZEROOUT_x64_INSTR();
+	x64EncodeMovGI(x64instrs+(instr_cnt++), x64oprs_tmp[2],x64oprs_tmp[1],TYPE_ID_QWORD);
+	ZEROOUT_x64_INSTR();
+	x64instrs[instr_cnt].opcode_len = 1;
+	x64instrs[instr_cnt].opcode[0] = 0xff;
+	x64instrs[instr_cnt].ModRM_SIB_len = 2;
+	x64instrs[instr_cnt].ModRM_SIB[0] = 0x14;
+	x64instrs[instr_cnt].ModRM_SIB[1] = 0xc2;
+	//callq *(%rdx, %rax, 8)
+	instr_cnt++;
+	return;
+}
 
 void TranslateAluOp(I0INSTR* instr, uint8_t** tpc, uint8_t op) {
 	x64_OPR x64oprs[3];
