@@ -4,6 +4,10 @@
 #include "bin_translator.h"
 #include "zlog.h"
 
+int translate2x86_64_shift(
+        instr_t *i, int is_write_n,
+        char *n, uint64_t *nl, char *t, uint64_t *tl);
+
 static void error(char *msg)
 {
 
@@ -31,6 +35,11 @@ static void error(char *msg)
     exit(1);
 }
 
+static void warning(char *msg)
+{
+    zlogf("WARNING: %s\n", msg);
+}
+
 int within_32bit(uint64_t n)
 {
     // long t = 0;
@@ -48,9 +57,6 @@ int within_32bit(uint64_t n)
 
     // return (t == u);
 }
-
-
-
 
 inline int is_in_reg_file(uint64_t opr)
 {
