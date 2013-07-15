@@ -2506,6 +2506,168 @@ void instr2x86_64_opr(unsigned int attr, unsigned int addrm, uint64_t opr, uint3
     return;
 }
 
+int x86_64_encode_movq(int is_write_n, char *n, uint64_t *nl, x86_64_opr_t *opr1, x86_64_opr_t *opr2)
+{
+
+    int reg1_en = 0;
+    int reg2_en = 0;
+    x86_64_opr_t *tmp;
+    char c;
+    char opcode = 0;
+
+#ifdef _DEBUG_MOVQ_
+    zlogf("opr1: \n");
+    print_x86_64_opr(opr1);
+    zlogf("opr2: \n");
+    print_x86_64_opr(opr2);
+#endif
+
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_
+    if (is_write_n) {
+        zlogf("native instr: @%#lx movq A, B\n", n+(*nl));
+    }
+#endif
+
+    if (opr1->addrm == X86_64_ADDRM_IMMEDIATE_SL) {
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
+        zlogf("with $imm -- ");
+#endif
+        if (is_write_n) {
+            reg2_en = 0;
+            reg1_en = x86_64_reg_encoding(opr2->opr);
+            // encoding
+            // REX.W
+            c = 0x40;
+            c += 0x01 << 3; // W
+            // R 0
+            // X 0
+            c += (reg1_en & 0x8) >> 3; // B
+            n[(*nl)++] = c;
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
+            zlogf("%2x ", 0xff & n[(*nl)-1]);
+#endif
+            // Opcode
+            n[(*nl)++] = 0xc7;
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
+            zlogf("%2x ", 0xff & n[(*nl)-1]);
+#endif
+            // ModRM
+            switch (opr2->addrm) {
+                case X86_64_ADDRM_REG:
+                    c = 0xc0; // mod
+                    break;
+                case X86_64_ADDRM_INDIRECT:
+                    c = 0x00; // mod
+                    break;
+                case X86_64_ADDRM_DISPLACEMENT:
+                    c = 0x80; // mod
+                    break;
+                default:
+                    error("Should not reach here.\n");
+            } 
+            // rrr 000
+            c += (reg1_en & 0x7); // bbb
+            n[(*nl)++] = c;
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
+            zlogf("%2x \n", 0xff & n[(*nl)-1]);
+#endif
+            // disp
+            if (opr2->addrm == X86_64_ADDRM_DISPLACEMENT) {
+                *((uint32_t*)(n + (*nl))) = opr2->disp;
+                *nl += 4;
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
+                zlogf("%x \n", n[(*nl)-4]);
+#endif
+            }
+            // imm
+            *((uint32_t*)(n + (*nl))) = *(uint32_t*)(&(opr1->opr));
+            *nl += 4;
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
+            zlogf("%x \n", n[(*nl)-4]);
+#endif
+        } else {
+            *nl += 3 + 4;
+            if (opr2->addrm == X86_64_ADDRM_DISPLACEMENT) {
+                *nl += 4;
+            }
+        }
+
+    } else {
+        if (opr1->addrm == X86_64_ADDRM_REG) {
+            opcode = 0x89;
+            // now exchange reg1/reg2
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
+            zlogf("exchange it -- ");
+#endif
+            tmp = opr1;
+            opr1 = opr2;
+            opr2 = tmp;
+        } else if (opr2->addrm == X86_64_ADDRM_REG) {
+            opcode = 0x8b;
+        } else {
+            error("Should not reach here 5629.\n");
+        }
+
+        if (is_write_n) {
+            reg1_en = x86_64_reg_encoding(opr1->opr); // B
+            reg2_en = x86_64_reg_encoding(opr2->opr); // R
+            // encoding
+            // REX.W
+            c = 0x40;
+            c += 0x01 << 3; // W
+            c += (reg2_en & 0x8) >> 1; // R
+            // X 0
+            c += (reg1_en & 0x8) >> 3; // B
+            n[(*nl)++] = c;
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
+            zlogf("%2x ", 0xff & n[(*nl)-1]);
+#endif
+            // Opcode
+            n[(*nl)++] = opcode;
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
+            zlogf("%2x ", 0xff & n[(*nl)-1]);
+#endif
+            // ModRM
+            switch (opr1->addrm) {
+                case X86_64_ADDRM_REG:
+                    c = 0xc0; // mod
+                    break;
+                case X86_64_ADDRM_INDIRECT:
+                    c = 0x00; // mod
+                    break;
+                case X86_64_ADDRM_DISPLACEMENT:
+                    c = 0x80; // mod
+                    break;
+                default:
+                    error("Should not reach here.\n");
+            } 
+
+            c += (reg2_en & 0x7) << 3; // rrr
+            c += (reg1_en & 0x7); // r/m
+            n[(*nl)++] = c;
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
+            zlogf("%2x \n", 0xff & n[(*nl)-1]);
+#endif 
+            // disp
+            if (opr1->addrm == X86_64_ADDRM_DISPLACEMENT) {
+                *((uint32_t*)(n + (*nl))) = opr1->disp;
+                *nl += 4;
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
+                zlogf("%x \n", n[(*nl)-4]);
+#endif
+            }
+
+        } else {
+            *nl += 3;
+            if (opr1->addrm == X86_64_ADDRM_DISPLACEMENT) {
+                *nl += 4;
+            }
+        }
+    }
+
+    return 0;
+}
+
 int opt_translate2x86_64_mov(
         instr_t *i, int is_write_n,
         char *n, uint64_t *nl, char *t, uint64_t *tl)
@@ -2734,164 +2896,218 @@ int opt_translate2x86_64_mov(
     return 0;
 }
 
-int x86_64_encode_movq(int is_write_n, char *n, uint64_t *nl, x86_64_opr_t *opr1, x86_64_opr_t *opr2)
+int translate2x86_64_mov(
+        instr_t *i, int is_write_n,
+        char *n, uint64_t *nl, char *t, uint64_t *tl)
 {
+    int modes = 0;
 
-    int reg1_en = 0;
-    int reg2_en = 0;
-    x86_64_opr_t *tmp;
-    char c;
-    char opcode = 0;
-
-#ifdef _DEBUG_MOVQ_
-    zlogf("opr1: \n");
-    print_x86_64_opr(opr1);
-    zlogf("opr2: \n");
-    print_x86_64_opr(opr2);
-#endif
-
+    // optimization opportunities
+    if (opt_translate2x86_64_mov(i, is_write_n, n, nl, t, tl)) {
 #ifdef _DEBUG_PRINT_NATIVE_INSTR_
-    if (is_write_n) {
-        zlogf("native instr: @%#lx movq A, B\n", n+(*nl));
+        zlogf("mov: optimized.\n");
+#endif
+        return 0;
     }
-#endif
 
-    if (opr1->addrm == X86_64_ADDRM_IMMEDIATE_SL) {
-#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
-        zlogf("with $imm -- ");
-#endif
-        if (is_write_n) {
-            reg2_en = 0;
-            reg1_en = x86_64_reg_encoding(opr2->opr);
-            // encoding
-            // REX.W
-            c = 0x40;
-            c += 0x01 << 3; // W
-            // R 0
-            // X 0
-            c += (reg1_en & 0x8) >> 3; // B
-            n[(*nl)++] = c;
-#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
-            zlogf("%2x ", 0xff & n[(*nl)-1]);
-#endif
-            // Opcode
-            n[(*nl)++] = 0xc7;
-#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
-            zlogf("%2x ", 0xff & n[(*nl)-1]);
-#endif
-            // ModRM
-            switch (opr2->addrm) {
-                case X86_64_ADDRM_REG:
-                    c = 0xc0; // mod
-                    break;
-                case X86_64_ADDRM_INDIRECT:
-                    c = 0x00; // mod
-                    break;
-                case X86_64_ADDRM_DISPLACEMENT:
-                    c = 0x80; // mod
-                    break;
-                default:
-                    error("Should not reach here.\n");
-            } 
-            // rrr 000
-            c += (reg1_en & 0x7); // bbb
-            n[(*nl)++] = c;
-#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
-            zlogf("%2x \n", 0xff & n[(*nl)-1]);
-#endif
-            // disp
-            if (opr2->addrm == X86_64_ADDRM_DISPLACEMENT) {
-                *((uint32_t*)(n + (*nl))) = opr2->disp;
-                *nl += 4;
-#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
-                zlogf("%x \n", n[(*nl)-4]);
-#endif
-            }
-            // imm
-            *((uint32_t*)(n + (*nl))) = *(uint32_t*)(&(opr1->opr));
-            *nl += 4;
-#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
-            zlogf("%x \n", n[(*nl)-4]);
-#endif
-        } else {
-            *nl += 3 + 4;
-            if (opr2->addrm == X86_64_ADDRM_DISPLACEMENT) {
-                *nl += 4;
-            }
-        }
+    // // default one: fall back
 
-    } else {
-        if (opr1->addrm == X86_64_ADDRM_REG) {
-            opcode = 0x89;
-            // now exchange reg1/reg2
-#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
-            zlogf("exchange it -- ");
-#endif
-            tmp = opr1;
-            opr1 = opr2;
-            opr2 = tmp;
-        } else if (opr2->addrm == X86_64_ADDRM_REG) {
-            opcode = 0x8b;
-        } else {
-            error("Should not reach here 5629.\n");
-        }
+    modes = ((i->mattr1) << 16) + (i->mattr2);
 
-        if (is_write_n) {
-            reg1_en = x86_64_reg_encoding(opr1->opr); // B
-            reg2_en = x86_64_reg_encoding(opr2->opr); // R
-            // encoding
-            // REX.W
-            c = 0x40;
-            c += 0x01 << 3; // W
-            c += (reg2_en & 0x8) >> 1; // R
-            // X 0
-            c += (reg1_en & 0x8) >> 3; // B
-            n[(*nl)++] = c;
-#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
-            zlogf("%2x ", 0xff & n[(*nl)-1]);
-#endif
-            // Opcode
-            n[(*nl)++] = opcode;
-#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
-            zlogf("%2x ", 0xff & n[(*nl)-1]);
-#endif
-            // ModRM
-            switch (opr1->addrm) {
-                case X86_64_ADDRM_REG:
-                    c = 0xc0; // mod
-                    break;
-                case X86_64_ADDRM_INDIRECT:
-                    c = 0x00; // mod
-                    break;
-                case X86_64_ADDRM_DISPLACEMENT:
-                    c = 0x80; // mod
-                    break;
-                default:
-                    error("Should not reach here.\n");
-            } 
+    switch (modes) {
+        case (MATTR_SE << 16) + MATTR_SE:
+        case (MATTR_SE << 16) + MATTR_UE:
+        case (MATTR_UE << 16) + MATTR_SE:
+        case (MATTR_UE << 16) + MATTR_UE:
+        case (MATTR_FD << 16) + MATTR_FD:
+            // read in opr1 to %rdi
+            // READ(D1, %rdi)
+            translate2x86_64_read(i->opr1, i->disp1, i->addrm1, X86_64_R_RDI, n, nl, is_write_n);
+            // write %rdi to opr2
+            // WRITE(%rdi, M)
+            translate2x86_64_write(i->opr2, i->disp2, i->addrm2, X86_64_R_RDI, n, nl, is_write_n);
+            break;
+        case (MATTR_SE << 16) + MATTR_FD:
+            // read in opr1 to %rax
+            // READ(D1, %rax)
+            translate2x86_64_read(i->opr1, i->disp1, i->addrm1, X86_64_R_RAX, n, nl, is_write_n);
 
-            c += (reg2_en & 0x7) << 3; // rrr
-            c += (reg1_en & 0x7); // r/m
-            n[(*nl)++] = c;
-#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
-            zlogf("%2x \n", 0xff & n[(*nl)-1]);
-#endif 
-            // disp
-            if (opr1->addrm == X86_64_ADDRM_DISPLACEMENT) {
-                *((uint32_t*)(n + (*nl))) = opr1->disp;
-                *nl += 4;
-#ifdef _DEBUG_PRINT_NATIVE_INSTR_BINARY_
-                zlogf("%x \n", n[(*nl)-4]);
+            // convert
+            if (is_write_n) {
+                // cvtsi2sdq   %rax, %xmm0
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_
+                zlogf("native instr: @%#lx cvtsi2sdq %%rax, %%xmm0\n", n+(*nl));
 #endif
+                n[(*nl)++] = 0xf2;
+                n[(*nl)++] = 0x48;
+                n[(*nl)++] = 0x0f;
+                n[(*nl)++] = 0x2a;
+                n[(*nl)++] = 0xc0;
+
+                // movq %xmm0, %rax
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_
+                zlogf("native instr: @%#lx movq %%xmm0, %%rax\n", n+(*nl));
+#endif
+                n[(*nl)++] = 0x66;
+                n[(*nl)++] = 0x48;
+                n[(*nl)++] = 0x0f;
+                n[(*nl)++] = 0x7e;
+                n[(*nl)++] = 0xc0;
+            } else {
+                *nl += 10;
             }
 
-        } else {
-            *nl += 3;
-            if (opr1->addrm == X86_64_ADDRM_DISPLACEMENT) {
+            // write %rax to opr2
+            // WRITE(%rax, M)
+            translate2x86_64_write(i->opr2, i->disp2, i->addrm2, X86_64_R_RAX, n, nl, is_write_n);
+
+            break;
+        case (MATTR_FD << 16) + MATTR_SE:
+            // read in opr1 to %rax
+            // READ(D1, %rax)
+            translate2x86_64_read(i->opr1, i->disp1, i->addrm1, X86_64_R_RAX, n, nl, is_write_n);
+
+            // convert
+            if (is_write_n) {
+                // movq %rax, %xmm0
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_
+                zlogf("native instr: @%#lx movq %%rax, %%xmm0\n", n+(*nl));
+#endif
+                n[(*nl)++] = 0x66;
+                n[(*nl)++] = 0x48;
+                n[(*nl)++] = 0x0f;
+                n[(*nl)++] = 0x6e;
+                n[(*nl)++] = 0xc0;
+                // cvttsd2siq  %xmm0, %rax
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_
+                zlogf("native instr: @%#lx cvtsd2siq %%xmm0, %%rax\n", n+(*nl));
+#endif
+                n[(*nl)++] = 0xf2;
+                n[(*nl)++] = 0x48;
+                n[(*nl)++] = 0x0f;
+                n[(*nl)++] = 0x2c;
+                n[(*nl)++] = 0xc0;
+            } else {
+                *nl += 10;
+            }
+
+            // write %rax to opr2
+            // WRITE(%rax, M)
+            translate2x86_64_write(i->opr2, i->disp2, i->addrm2, X86_64_R_RAX, n, nl, is_write_n);
+
+            break;
+
+        case (MATTR_FS << 16) + MATTR_SE:
+        case (MATTR_SE << 16) + MATTR_FS:
+            error("translate2x86_64_mov: undefined/unsupported/unimplemented mattr combination. F<->SQ\n");
+            break;
+
+        case (MATTR_SF << 16) + MATTR_SE:
+        case (MATTR_SF << 16) + MATTR_UE:
+            // signed extension
+            // read opr1 to %eax
+            _translate2x86_64_read(i->opr1, i->disp1, i->addrm1, X86_64_R_RAX, n, nl, is_write_n, i->mattr1);
+
+            // signed extend %eax to %rax
+            if (is_write_n) {
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_
+                zlogf("native instr: @%#lx cltq\n", n+(*nl));
+#endif
+                // cltq
+                n[(*nl)++] = 0x48;
+                n[(*nl)++] = 0x98;
+            }
+            else {
+                *nl += 2;
+            }
+
+            // write %rax to opr2
+            translate2x86_64_write(i->opr2, i->disp2, i->addrm2, X86_64_R_RAX, n, nl, is_write_n);
+
+            break;
+        case (MATTR_UF << 16) + MATTR_SE:
+        case (MATTR_UF << 16) + MATTR_UE:
+            // zero extension
+            // read opr1 to %eax
+            _translate2x86_64_read(i->opr1, i->disp1, i->addrm1, X86_64_R_RAX, n, nl, is_write_n, i->mattr1);
+
+            // write %rax to opr2
+            translate2x86_64_write(i->opr2, i->disp2, i->addrm2, X86_64_R_RAX, n, nl, is_write_n);
+           
+            break;
+        case (MATTR_SE << 16) + MATTR_SF:
+        case (MATTR_SE << 16) + MATTR_UF:
+        case (MATTR_UE << 16) + MATTR_SF:
+        case (MATTR_UE << 16) + MATTR_UF:
+            // read opr1 to %rax
+            translate2x86_64_read(i->opr1, i->disp1, i->addrm1, X86_64_R_RAX, n, nl, is_write_n);
+
+            // write %eax to opr2
+            _translate2x86_64_write(i->opr2, i->disp2, i->addrm2, X86_64_R_RAX, n, nl, is_write_n, i->mattr2);
+ 
+            break;
+            /*
+        case (MATTR_UB << 16) + MATTR_SE:
+        case (MATTR_UB << 16) + MATTR_UE:
+            // zero extension
+            //
+            // read opr1 to %eax
+            // _translate2x86_64_read(i->opr1, i->disp1, i->addrm1, 0, n, nl, is_write_n, i->mattr1);
+
+            // write %rax to opr2
+            translate2x86_64_write(i->opr2, i->disp2, i->addrm2, X86_64_R_RAX, n, nl, is_write_n);
+            */
+        case (MATTR_SE << 16) + MATTR_SB:
+        case (MATTR_SE << 16) + MATTR_UB:
+        case (MATTR_UE << 16) + MATTR_SB:
+        case (MATTR_UE << 16) + MATTR_UB:
+            // read opr1 to %al
+            translate2x86_64_read(i->opr1, i->disp1, i->addrm1, X86_64_R_RAX, n, nl, is_write_n);
+
+            // write %al to opr2
+            _translate2x86_64_write(i->opr2, i->disp2, i->addrm2, X86_64_R_RAX, n, nl, is_write_n, i->mattr2);
+ 
+            break;
+        case (MATTR_SB << 16) + MATTR_SE:
+        // case (MATTR_SB << 16) + MATTR_UE:
+            // signed extension
+            //
+            // read opr1 to %al
+            _translate2x86_64_read(i->opr1, i->disp1, i->addrm1, X86_64_R_RAX, n, nl, is_write_n, i->mattr1);
+
+            // signed extend %al to %rax
+            if (is_write_n) {
+#ifdef _DEBUG_PRINT_NATIVE_INSTR_
+                zlogf("native instr: @%#lx movsbq %%al, %%rax\n", n+(*nl));
+#endif
+                n[(*nl)++] = 0x48;
+                n[(*nl)++] = 0x0f;
+                n[(*nl)++] = 0xbe;
+                n[(*nl)++] = 0xc0;
+            }
+            else {
                 *nl += 4;
             }
-        }
+
+            // write %rax to opr2
+            translate2x86_64_write(i->opr2, i->disp2, i->addrm2, X86_64_R_RAX, n, nl, is_write_n);
+            break;
+        case (MATTR_UB << 16) + MATTR_SB:
+        case (MATTR_UB << 16) + MATTR_UB:
+        case (MATTR_SB << 16) + MATTR_SB:
+        case (MATTR_SB << 16) + MATTR_UB:
+            // read opr1 to %al
+            _translate2x86_64_read(i->opr1, i->disp1, i->addrm1, X86_64_R_RAX, n, nl, is_write_n, i->mattr1);
+
+            // write %al to opr2
+            // translate2x86_64_write(i->opr2, i->disp2, i->addrm2, X86_64_R_RAX, n, nl, is_write_n);
+            _translate2x86_64_write(i->opr2, i->disp2, i->addrm2, X86_64_R_RAX, n, nl, is_write_n, i->mattr2);
+            break;
+        default:
+            error("translate2x86_64_mov: default: undefined/unsupported/unimplemented mattr combination.\n");
     }
+    
+    // TODO support more
 
     return 0;
 }
