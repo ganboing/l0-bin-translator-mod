@@ -3116,7 +3116,7 @@ int translate2x86_64_mov(
 	do{ DECODE_STATUS result= {status, detail}; return result;}while(0);
 
 int translate2x86_64_nop(instr_t *i, int is_write_n,uint8_t *n, uint64_t *nl, char *t, uint64_t *tl);
-int translate2x86_64_mov(instr_t *i, int is_write_n,uint8_t *n, uint64_t *nl, char *t, uint64_t *tl);
+int translate2x86_64_mov(instr_t *i, int is_write_n,char *n, uint64_t *nl, char *t, uint64_t *tl);
 int translate2x86_64_alu_op(instr_t *i, int is_write_n,uint8_t *n, uint64_t *nl, char *t, uint64_t *tl);
 int translate2x86_64_int(instr_t *i, int is_write_n,uint8_t *n, uint64_t *nl, char *t, uint64_t *tl);
 int translate2x86_64_exit(instr_t *i, int is_write_n,uint8_t *n, uint64_t *nl, char *t, uint64_t *tl);
@@ -3142,7 +3142,7 @@ DECODE_STATUS TranslateCONV_WR(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelim
 	__instr.addrm2 = (instr->opr[1].addrm);
 	__instr.opr2 = (instr->opr[1].val.v64);
 	__instr.disp2 = (instr->opr[1].disp32);
-	translate2x86_64_mov((&__instr), 1, tpc, nativelimit, 0, 0);
+	translate2x86_64_mov((&__instr), 1, ((char*)tpc), nativelimit, 0, 0);
 	RETURN_DECODE_STATUS(0,0);
 }
 
