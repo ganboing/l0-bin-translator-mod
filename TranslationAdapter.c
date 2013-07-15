@@ -3134,7 +3134,7 @@ DECODE_STATUS TranslateCONV_WR(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelim
 {
 	instr_t __instr;
 	__instr.addr = (instr->addr);
-	__instr.mattr1 = (instr->attr);
+	//__instr.mattr1 = (instr->attr);
 	__instr.mattr2 = (instr->attr2);
 	__instr.addrm1 = (instr->opr[0].addrm);
 	__instr.opr1 = (instr->opr[0].val.v64);
