@@ -124,6 +124,7 @@
 		: "cc"\
 	)
 
+#ifndef MSVC
 #define GET_INST_FIELD_NW(dest,src,n) \
 	__asm__ (\
 		"andl $0, %0\n\t"\
@@ -184,5 +185,20 @@
 		:"+r" (op)\
 		:"r" (ptr)\
 	)
+#else
+#define GET_INST_FIELD_NW(dest,src,n) 
 
+#define GET_INST_FIELD_SH(dest,src,n) 
+
+#define GET_INST_FIELD_ZO(dest,src,n) 
+
+#define LOAD_OP_DWORD_AND_SH(op,ptr,n) 
+
+#define LOAD_OP_WORD0(op,ptr) 
+
+#define LOAD_OP_BYTE2(op,ptr) 
+
+#define LOAD_OP_BYTE3(op,ptr) 
+
+#endif
 #endif /* ASM_MACROS_H_ */

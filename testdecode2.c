@@ -675,20 +675,44 @@ __inline void x64EncodeNegE(x64INSTR* instr, x64_OPR E, uint8_t oprsize)
 	G.reg = 0x03;
 	x64EncodeFillOpr(instr,G,E);
 }
-__inline void Writex64Instr(x64INSTR* instr, uint8_t** tpc)
+__inline void Writex64Instrs(x64INSTR* instrs,uint32_t instr_cnt, uint8_t** tpc, int is_write)
 {
-	if(instr->REX)
+	uint32_t i;
+	for(i=0;i<instr_cnt;i++)
 	{
-		(*((*tpc)++)) =instr->REX;
+		x64INSTR* instr = (&(instrs[i]));
+		if(instr->REX)
+		{
+			if(is_write)
+			{
+				(*((*tpc)++)) =( (instr->REX) | 0x40);
+			}
+			else
+			{
+				(*tpc) ++;
+			}
+		}
+		if(is_write)
+		{
+			memcpy((*tpc),(&(instr->opcode[0])),instr->opcode_len);
+		}
+		(*tpc) += instr->opcode_len;
+		if(is_write)
+		{
+			memcpy((*tpc), (&(instr->ModRM_SIB[0])),instr->ModRM_SIB_len);
+		}
+		(*tpc) += instr->ModRM_SIB_len;
+		if(is_write)
+		{
+			memcpy((*tpc), (&(instr->disp)),instr->disp_len);
+		}
+		(*tpc) += instr->disp_len;
+		if(is_write)
+		{
+			memcpy((*tpc), (&(instr->imm.v8)),instr->imm_len);
+		}
+		(*tpc) += instr->imm_len;
 	}
-	memcpy((*tpc),(&(instr->opcode[0])),instr->opcode_len);
-	(*tpc) += instr->opcode_len;
-	memcpy((*tpc), (&(instr->ModRM_SIB[0])),instr->ModRM_SIB_len);
-	(*tpc) += instr->ModRM_SIB_len;
-	memcpy((*tpc), (&(instr->disp)),instr->disp_len);
-	(*tpc) += instr->disp_len;
-	memcpy((*tpc), (&(instr->imm.v8)),instr->imm_len);
-	(*tpc) += instr->imm_len;
 }
 typedef struct _IMM_CACHE_REG{
 	uint8_t reg;
@@ -807,6 +831,8 @@ void TranslateINT(I0INSTR* i0instr, x64INSTR* x64instrs, uint32_t* _x64_ins_cnt)
 	instr_cnt++;
 	return;
 }
+
+void TranslateBZNZ(I0INSTR* i0instr, 
 
 void TranslateAluOp(I0INSTR* instr, uint8_t** tpc, uint8_t op) {
 	x64_OPR x64oprs[3];
