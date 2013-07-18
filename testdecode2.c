@@ -103,6 +103,7 @@ static uint8_t I0OprISize[0x10]=
 			{\
 				(x64opr).type = x64_OPR_TYPE_M;\
 				(x64opr).off32 = 0;\
+				(reg_encoded) = 0;\
 			}\
 			break;\
 		case ADDRM_DISPLACEMENT:\
@@ -112,6 +113,10 @@ static uint8_t I0OprISize[0x10]=
 				(x64opr).reg=MAP_TO_NATIVE_REGISTER((i0opr).val.v64);\
 				(reg_encoded) = 1;\
 			}\
+			else\
+			{\
+				(reg_encoded) = 0;\
+			}\
 			(x64opr).off32 = (i0opr).disp32;\
 			break;\
 		case ADDRM_INDIRECT:\
@@ -120,6 +125,10 @@ static uint8_t I0OprISize[0x10]=
 			{\
 				(x64opr).reg=MAP_TO_NATIVE_REGISTER((i0opr).val.v64);\
 				(reg_encoded) = 1;\
+			}\
+			else\
+			{\
+				(reg_encoded) = 0;\
 			}\
 			(x64opr).off32 = 0;\
 			break;\
@@ -189,7 +198,7 @@ DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nat
 	x64oprs_tmp[0].reg = x64_AX;
 	x64oprs_tmp[0].type = x64_OPR_TYPE_REG;
 	x64oprs_tmp[0].reg = x64_SI;
-	uint32_t opr_encoded_reg[1];
+	uint32_t opr_encoded_reg[1] = {0};
 	ENCODE_OPR((*i0_opr), x64oprs[0], opr_encoded_reg[0]);
 	do{
 		if(!(opr_encoded_reg[0]))
@@ -217,11 +226,11 @@ DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nat
 		(*nativeblock) += 4;
 		memcpy(nativeblock+(*nativelimit),shl_eax_3_lea_3rax_op, 7);
 		(*nativeblock) += 7;
-		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ( (uint32_t)IndirJmpHashTab );
+		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ((uint32_t) ((uint64_t)IndirJmpHashTab) );
 		(*nativeblock) += 4;
 		memcpy(nativeblock+(*nativelimit), rest1, 11);
 		(*nativeblock) += 11;
-		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ( (uint32_t)MapSpcToTpc_Thunk );
+		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ((uint32_t) ((uint64_t)MapSpcToTpc_Thunk) );
 		(*nativeblock) += 4;
 		memcpy(nativeblock+(*nativelimit), jmpq_rax, 2);
 		(*nativeblock) += 2;
@@ -307,7 +316,7 @@ DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 	x64_OPR x64oprs[2];
 	x64_OPR x64oprs_tmp[3];
 	x64INSTR x64instrs[10];
-	uint32_t instr_cnt;
+	uint32_t instr_cnt = 0;
 	I0OPR* i0_opr0 = (&(i0instr->opr[0]));
 	I0OPR* i0_opr1 = (&(i0instr->opr[1]));
 
@@ -318,10 +327,10 @@ DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 	x64oprs_tmp[0].type = x64_OPR_TYPE_REG;
 	x64oprs_tmp[0].reg = x64_AX;
 
-	int opr_encoded_reg[2];
+	int opr_encoded_reg[2] = {0,0};
 
-	int* opr0_encoded_reg = (&(opr0_encoded_reg[0]));
-	int* opr1_encoded_reg = (&(opr1_encoded_reg[1]));
+	int* opr0_encoded_reg = (&(opr_encoded_reg[0]));
+	int* opr1_encoded_reg = (&(opr_encoded_reg[1]));
 
 	int is_less = 0;
 	int is_equal = 0;
