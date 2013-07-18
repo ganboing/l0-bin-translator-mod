@@ -357,6 +357,21 @@ __inline static void x64EncodeAluEI(x64INSTR* instr, uint8_t op, x64_OPR E,x64_O
 	G.reg = op;
 	x64EncodeFillOpr(instr, G, E);
 }
+__inline static void x64EncodeAlu(x64INSTR* instr, uint8_t op, x64_OPR dest, x64_OPR src, uint8_t oprsize)
+{
+	switch(src.type)
+	{
+	case x64_OPR_I:
+		x64EncodeAluEI(instr, op, dest, src, oprsize);
+		return;
+	case x64_OPR_TYPE_M:
+		x64EncodeAluGE(instr, op, dest, src, oprsize);
+		return;
+	case x64_OPR_TYPE_REG:
+		x64EncodeAluEG(instr, op, dest, src, oprsize);
+		return;
+	}
+}
 __inline static void x64EncodeMulDivE(x64INSTR* instr, uint8_t op, x64_OPR E, uint8_t oprsize)
 {
 	x64_OPR G;
