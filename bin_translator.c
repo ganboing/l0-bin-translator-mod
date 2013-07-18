@@ -29,7 +29,7 @@
 #include "bin_translator.h"
 #include "vpc_perf_counter.h"
 #include "zlog.h"
-#include "zlog_mod.h"
+//#include "zlog_mod.h"
 
 #include "profiling_entries.h"
 
@@ -1894,11 +1894,10 @@ inline uint32_t x86_64_reg_encoding(uint64_t reg)
 {
     int oprreg = -1;
     int regcomb = 0;
-
+  
     if (mattr == MATTR_SB || mattr == MATTR_UB) {
         // error("reg_file with SB/UB is not implemented yet.\n");
-        translate2x86_64_read_reg_file_base_disp(opr, 0, reg, n, nl, is_write_n, mattr);
-        return;
+        return translate2x86_64_read_reg_file_base_disp(opr, 0, reg, n, nl, is_write_n, mattr);
     }
 
     if (mattr == MATTR_SF || mattr == MATTR_UF) {
@@ -7830,7 +7829,7 @@ int translate_i0_code(
     return 0;
 }
 
-void PrintPBlockMeta(void)
+/*void PrintPBlockMeta(void)
 {
 	uint64_t i;
 	if(_pblockmeta!=NULL)
@@ -7851,11 +7850,11 @@ void PrintPBlockMeta(void)
 		}
 		ModLog( "└──────────────────────────\n");
 	}
-}
+}*/
 
 uint64_t get_native_code_address(char *target)
 {
-	printf("trying to translate i0 starting @ addr: 0x%lx",target);
+	//printf("trying to translate i0 starting @ addr: 0x%lx",target);
     char *i0_code = NULL;
     uint64_t i0_code_len = 0;
     char *native_code = NULL;
@@ -8174,8 +8173,8 @@ uint64_t _sys_indirect_jump_handler(char *target)
 uint64_t run_i0_code(uint64_t fi)
 {
 	//ModLog("this is a test!%d %d %d\n",1, 2, 3);
-	ModLog("preparing to run i0 code @ addr: 0x%lx\n",fi);
-	PrintPBlockMeta();
+	//ModLog("preparing to run i0 code @ addr: 0x%lx\n",fi);
+	//PrintPBlockMeta();
     uint64_t result = 0;
     uint64_t native_fi = 0;
 #ifdef _DEBUG_
