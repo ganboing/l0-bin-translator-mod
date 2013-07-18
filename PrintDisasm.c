@@ -6,12 +6,20 @@
 #include <fcntl.h>
 
 void InitTestTransOutput(void) __attribute__ ((constructor));
-
+void FinishTestTransOutput(void) __attribute__((destructor));
 static int outputfile = -1;
 
 static const unsigned long suggest_map_to_addr = 0x500000000000ULL;
 
 void* real_map_addr = 0;
+
+void FlushTransOutput(void)
+{
+	if(msync(real_map_addr, (1024ULL*1024ULL), MS_SYNC) == -1)
+	{
+		exit(-300);
+	}
+}
 
 void InitTestTransOutput(void)
 {
@@ -20,10 +28,14 @@ void InitTestTransOutput(void)
 	{
 		exit(-100);
 	}
-	real_map_addr = mmap(suggest_map_to_addr, (1024ULL*1024ULL),PROT_READ|PROT_WRITE,
+	real_map_addr = mmap((void*)suggest_map_to_addr, (1024ULL*1024ULL),PROT_READ|PROT_WRITE,
 			MAP_SHARED, outputfile, 0);
 	if(real_map_addr < (0x400000000000ULL))
 	{
 		exit(-200);
 	}
+}
+void FinishTestTransOutput(void)
+{
+	munmap(real_map_addr, (1024ULL)*(1024ULL));
 }
