@@ -8,6 +8,7 @@
 #include "sys_config.h"
 #include "asm_func.h"
 #include "DecodeI0.h"
+#include "asm_func.h"
 #include "x64Encode.h"
 #include "x64Encode.c"
 
