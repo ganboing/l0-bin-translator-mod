@@ -2,6 +2,45 @@
 #include <string.h>
 #include "x64Encode.h"
 
+__inline static void Writex64Instrs(x64INSTR* instrs,uint32_t instr_cnt, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
+{
+	uint32_t i;
+	for(i=0;i<instr_cnt;i++)
+	{
+		x64INSTR* instr = (&(instrs[i]));
+		if(instr->REX)
+		{
+			if(is_write)
+			{
+				nativeblock[(*nativelimit)++] =( (instr->REX) | 0x40);
+			}
+			else
+			{
+				(*nativelimit) ++;
+			}
+		}
+		if(is_write)
+		{
+			memcpy(nativeblock + (*nativelimit),(&(instr->opcode[0])),instr->opcode_len);
+		}
+		(*nativelimit) += instr->opcode_len;
+		if(is_write)
+		{
+			memcpy(nativeblock + (*nativelimit), (&(instr->ModRM_SIB[0])),instr->ModRM_SIB_len);
+		}
+		(*nativelimit) += instr->ModRM_SIB_len;
+		if(is_write)
+		{
+			memcpy(nativeblock + (*nativelimit), (&(instr->disp)),instr->disp_len);
+		}
+		(*nativelimit) += instr->disp_len;
+		if(is_write)
+		{
+			memcpy(nativeblock + (*nativelimit), (&(instr->imm.v8)),instr->imm_len);
+		}
+		(*nativelimit) += instr->imm_len;
+	}
+}
 __inline static uint8_t EncodeModRM(uint8_t mod, uint8_t rm, uint8_t reg)
 {
 	uint8_t modrm = ((mod<<6)|(reg<<3)|rm);
@@ -480,45 +519,6 @@ __inline static void x64EncodeNegE(x64INSTR* instr, x64_OPR E, uint8_t oprsize)
 	}
 	G.reg = 0x03;
 	x64EncodeFillOpr(instr,G,E);
-}
-__inline static void Writex64Instrs(x64INSTR* instrs,uint32_t instr_cnt, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
-{
-	uint32_t i;
-	for(i=0;i<instr_cnt;i++)
-	{
-		x64INSTR* instr = (&(instrs[i]));
-		if(instr->REX)
-		{
-			if(is_write)
-			{
-				nativeblock[(*nativelimit)++] =( (instr->REX) | 0x40);
-			}
-			else
-			{
-				(*nativelimit) ++;
-			}
-		}
-		if(is_write)
-		{
-			memcpy(nativeblock + (*nativelimit),(&(instr->opcode[0])),instr->opcode_len);
-		}
-		(*nativelimit) += instr->opcode_len;
-		if(is_write)
-		{
-			memcpy(nativeblock + (*nativelimit), (&(instr->ModRM_SIB[0])),instr->ModRM_SIB_len);
-		}
-		(*nativelimit) += instr->ModRM_SIB_len;
-		if(is_write)
-		{
-			memcpy(nativeblock + (*nativelimit), (&(instr->disp)),instr->disp_len);
-		}
-		(*nativelimit) += instr->disp_len;
-		if(is_write)
-		{
-			memcpy(nativeblock + (*nativelimit), (&(instr->imm.v8)),instr->imm_len);
-		}
-		(*nativelimit) += instr->imm_len;
-	}
 }
 __inline static uint8_t Getx64InstrSize(x64INSTR* instr)
 {
