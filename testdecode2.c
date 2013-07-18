@@ -1,7 +1,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include "I0Symbol.h"
+#include "DecodeI0.h"
+#include "DecodeStatus.h"
 
 #define x64_ALU_OP_ID_ADD		0
 #define x64_ALU_OP_ID_OR		1
@@ -51,6 +54,8 @@
 #define REX_R_BIT 2
 #define REX_W_BIT 3
 
+#define ZEROOUT_x64_INSTR() \
+	do{memset((char*)(x64instrs + instr_cnt),0,sizeof(x64INSTR));}while(0)
 
 
 uint8_t i0_x64_reg_map[0x08]=
@@ -78,30 +83,6 @@ uint8_t i0_x64_reg_map[0x08]=
 #define TYPE_ID_DWORD 1
 #define TYPE_ID_QWORD 2
 #define TYPE_ID_OWORD 3
-
-typedef union _OPRVAL {
-	uint8_t v8;
-	uint16_t v16;
-	uint32_t v32;
-	uint64_t v64;
-}OPRVAL;
-
-typedef struct _I0OPR {
-	OPRVAL val;
-	uint32_t addrm;
-	uint32_t disp32;
-}I0OPR;
-
-typedef struct _I0INSTR {
-	uint64_t addr;
-	uint32_t addr_size_mode;
-	uint32_t opcode;
-	uint32_t attr;
-	uint32_t attr2;
-	uint32_t option;
-	uint32_t ra;
-	I0OPR opr[5];
-}I0INSTR;
 
 #define I0_REGISTER_BASE	0x400000000ULL
 
@@ -135,45 +116,6 @@ static uint8_t I0OprISize[0x10]=
 	TYPE_ID_DWORD,
 	TYPE_ID_QWORD,
 };
-
-typedef union _IMM_TYPE {
-	uint8_t v8;
-	uint16_t v16;
-	uint32_t v32;
-	uint64_t v64;
-}IMM_TYPE;
-
-typedef struct _x64_OPR{
-	uint8_t type;
-#define x64_OPR_TYPE_REG		1
-#define x64_OPR_TYPE_M			2
-#define x64_OPR_I				0
-	uint8_t reg;
-	uint32_t off32;
-	IMM_TYPE imm;
-}x64_OPR;
-
-typedef union _OFFSET_TYPE {
-	uint8_t v8;
-	uint32_t v32;
-}OFFSET_TYPE;
-
-
-typedef struct _x64INSTR{
-	uint8_t LegacyPrefix_Len;
-	uint8_t opcode_len;
-	uint8_t ModRM_SIB_len;
-	uint8_t disp_len;
-	uint8_t imm_len;
-	uint8_t LegacyPrefix[1];
-	uint8_t REX;
-	uint8_t opcode[2];
-	uint8_t ModRM_SIB[2];
-	OFFSET_TYPE disp;
-	IMM_TYPE imm;
-
-}x64INSTR;
-
 
 __inline  uint8_t EncodeModRM(uint8_t mod, uint8_t rm, uint8_t reg)
 {
@@ -593,6 +535,14 @@ __inline void x64EncodeJmpDirE(x64INSTR* instr,x64_OPR E)
 	G.reg = 4;
 	x64EncodeFillOpr(instr,G,E);
 }
+__inline void x64EncodeCallDirE(x64INSTR* instr, x64_OPR E)
+{
+	x64_OPR G;
+	instr->opcode_len = 11;
+	instr->opcode[0] = 0xff;
+	G.reg = 2;
+	x64EncodeFillOpr(instr, G, E);
+}
 __inline void x64EncodeJmpCcRel32(x64INSTR* instr, uint8_t tttn, uint32_t off32)
 {
 	instr->opcode_len = 2;
@@ -600,6 +550,21 @@ __inline void x64EncodeJmpCcRel32(x64INSTR* instr, uint8_t tttn, uint32_t off32)
 	instr->opcode[1] = 0x80 | tttn;
 	instr->imm_len = 4;
 	instr->imm.v32 = off32;
+}
+__inline void x64EncodeCallAbsImm64(uint8_t* nativeblock, uint64_t* nativelimit, uint64_t addr, int is_write)
+{
+	x64INSTR x64instrs[2];
+	uint32_t instr_cnt = 0;
+	x64_OPR x64oprs_tmp[4];
+	x64oprs_tmp[0].type = x64_OPR_TYPE_REG;
+	x64oprs_tmp[0].reg = x64_AX;
+	x64oprs_tmp[1].type = x64_OPR_I;
+	x64oprs_tmp[1].imm.v64 = addr;
+	ZEROOUT_x64_INSTR();
+	x64EncodeMovGI(x64instrs+ (instr_cnt++), x64oprs_tmp[0], x64oprs_tmp[1], TYPE_ID_QWORD);
+	ZEROOUT_x64_INSTR();
+	x64EncodeCallDirE(x64instrs + (instr_cnt++), x64oprs_tmp[1]);
+	Writex64Instrs(x64instrs, instr_cnt, nativeblock, nativelimit, is_write);
 }
 __inline void x64EncodeMovSx8To32GE(x64INSTR* instr, x64_OPR G, x64_OPR E)
 {
@@ -675,7 +640,7 @@ __inline void x64EncodeNegE(x64INSTR* instr, x64_OPR E, uint8_t oprsize)
 	G.reg = 0x03;
 	x64EncodeFillOpr(instr,G,E);
 }
-__inline void Writex64Instrs(x64INSTR* instrs,uint32_t instr_cnt, uint8_t** tpc, int is_write)
+__inline void Writex64Instrs(x64INSTR* instrs,uint32_t instr_cnt, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
 {
 	uint32_t i;
 	for(i=0;i<instr_cnt;i++)
@@ -685,33 +650,33 @@ __inline void Writex64Instrs(x64INSTR* instrs,uint32_t instr_cnt, uint8_t** tpc,
 		{
 			if(is_write)
 			{
-				(*((*tpc)++)) =( (instr->REX) | 0x40);
+				nativeblock[(*nativelimit)++] =( (instr->REX) | 0x40);
 			}
 			else
 			{
-				(*tpc) ++;
+				(*nativelimit) ++;
 			}
 		}
 		if(is_write)
 		{
-			memcpy((*tpc),(&(instr->opcode[0])),instr->opcode_len);
+			memcpy(nativeblock + (*nativelimit),(&(instr->opcode[0])),instr->opcode_len);
 		}
-		(*tpc) += instr->opcode_len;
+		(*nativelimit) += instr->opcode_len;
 		if(is_write)
 		{
-			memcpy((*tpc), (&(instr->ModRM_SIB[0])),instr->ModRM_SIB_len);
+			memcpy(nativeblock + (*nativelimit), (&(instr->ModRM_SIB[0])),instr->ModRM_SIB_len);
 		}
-		(*tpc) += instr->ModRM_SIB_len;
+		(*nativelimit) += instr->ModRM_SIB_len;
 		if(is_write)
 		{
-			memcpy((*tpc), (&(instr->disp)),instr->disp_len);
+			memcpy(nativeblock + (*nativelimit), (&(instr->disp)),instr->disp_len);
 		}
-		(*tpc) += instr->disp_len;
+		(*nativelimit) += instr->disp_len;
 		if(is_write)
 		{
-			memcpy((*tpc), (&(instr->imm.v8)),instr->imm_len);
+			memcpy(nativeblock + (*nativelimit), (&(instr->imm.v8)),instr->imm_len);
 		}
-		(*tpc) += instr->imm_len;
+		(*nativelimit) += instr->imm_len;
 	}
 }
 typedef struct _IMM_CACHE_REG{
@@ -759,8 +724,6 @@ static __inline int FindMemOperandFromCache(uint64_t addr,x64_OPR* M, MEM_CACHE_
 #define OPR3_ADDRM_ID(addrm1,addrm2,addrm3) \
 	((addrm1)|((addrm2)<<2)|((addrm3)<<4))
 
-#define ZEROOUT_x64_INSTR() \
-	do{memset((char*)(x64instrs + instr_cnt),0,sizeof(x64INSTR));}while(0)
 
 #define ENCODE_OPR(i0opr,x64opr,reg_encoded) \
 	do{\
@@ -780,6 +743,7 @@ static __inline int FindMemOperandFromCache(uint64_t addr,x64_OPR* M, MEM_CACHE_
 			else\
 			{\
 				(x64opr).type = x64_OPR_TYPE_M;\
+				(x64opr).off32 = 0;\
 			}\
 			break;\
 		case ADDRM_DISPLACEMENT:\
@@ -807,7 +771,7 @@ static __inline int FindMemOperandFromCache(uint64_t addr,x64_OPR* M, MEM_CACHE_
 
 void TranslateINT(I0INSTR* i0instr, x64INSTR* x64instrs, uint32_t* _x64_ins_cnt)
 {
-	unsigned int instr_cnt = 0;
+	uint32_t instr_cnt = 0;
 	x64_OPR x64oprs_tmp[4];
 	x64oprs_tmp[0].type = x64_OPR_I;
 	x64oprs_tmp[0].imm.v64 = IDT_BASE;
@@ -829,10 +793,302 @@ void TranslateINT(I0INSTR* i0instr, x64INSTR* x64instrs, uint32_t* _x64_ins_cnt)
 	x64instrs[instr_cnt].ModRM_SIB[1] = 0xc2;
 	//callq *(%rdx, %rax, 8)
 	instr_cnt++;
+	(*_x64_ins_cnt)  = instr_cnt;
 	return;
 }
 
-void TranslateBZNZ(I0INSTR* i0instr, 
+//typedef struct DECODE_STATUS ;
+
+DECODE_STATUS TranslateBZNZ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
+{
+	x64INSTR x64instrs[5];
+	uint32_t instr_cnt = 0;
+	x64_OPR x64oprs[1];
+	x64_OPR x64oprs_tmp[1];
+	unsigned int opr_encoed_reg[1] = {0};
+	ENCODE_OPR((i0instr->opr[0]), x64oprs[0], opr_encoed_reg[0]);
+	x64oprs_tmp[0].type = x64_OPR_I;
+	x64oprs_tmp[0].imm.v64 = 0;
+	int cmp_imm_z = 0;
+	uint8_t tttn;
+	if((i0instr->option) == OPT_B_Z)
+	{
+		tttn = x64_TTTN_NZ;
+	}
+	else
+	{
+		tttn = x64_TTTN_NZ;
+	}
+	switch(x64oprs[0].type)
+	{
+	case x64_OPR_I:
+		switch(I0OprISize[i0instr->attr])
+		{
+		case TYPE_ID_BYTE:
+			cmp_imm_z = ((x64oprs[0].imm.v8) == 0);
+			break;
+		case TYPE_ID_DWORD:
+			cmp_imm_z = ((x64oprs[0].imm.v32) == 0);
+			break;
+		case TYPE_ID_QWORD:
+			cmp_imm_z = ((x64oprs[0].imm.v64) == 0);
+			break;
+		}
+		if((cmp_imm_z && ((i0instr->option) == OPT_B_Z)) || 
+			((!cmp_imm_z) && ((i0instr->option) == OPT_B_NZ)))
+		{
+			x64EncodeCallAbsImm64(nativeblock, nativelimit,(i0instr->opr[2].val.v64),is_write);
+			RETURN_DECODE_STATUS(I0_DECODE_BRANCH,I0_DECODE_JMP,(*nativelimit)-12);
+		}
+		else
+		{
+			RETURN_DECODE_STATUS(I0_TRANS_SUCCESS_NO_FURTHER_PROC,0,0);
+		}
+		break;
+	case x64_OPR_TYPE_REG:
+		break;
+	case x64_OPR_TYPE_M:
+		if(!(opr_encoed_reg[0]))
+		{
+			ZEROOUT_x64_INSTR();
+			x64EncodeMovMI64ToAX(x64instrs + (instr_cnt++),(i0instr->opr[0].val.v64), I0OprISize[i0instr->attr]);	
+			x64oprs[0].reg = x64_AX;
+			if((i0instr->opr[0].addrm) == ADDRM_ABSOLUTE)
+			{
+				x64oprs[0].type = x64_OPR_TYPE_REG;
+			}
+		}
+		break;
+	}
+	ZEROOUT_x64_INSTR();
+	x64EncodeAluEI(x64instrs + (instr_cnt++), x64_ALU_OP_ID_CMP, x64oprs[0], x64oprs_tmp[0], I0OprISize[i0instr->attr]);
+	ZEROOUT_x64_INSTR();
+	x64EncodeJmpCcRel32(x64instrs + (instr_cnt++), tttn, 12);
+	Writex64Instrs(x64instrs,instr_cnt, nativeblock, nativelimit, is_write);
+	x64EncodeCallAbsImm64(nativeblock, nativelimit, (i0instr->opr[2].val.v64), is_write);
+	RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_JCC, (*nativelimit) - 12);
+}
+
+DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write) {
+	x64_OPR x64oprs[2];
+	x64_OPR x64oprs_tmp[3];
+	x64INSTR x64instrs[5];
+	uint32_t instr_cnt;
+	I0OPR* i0_opr0 = (&(i0instr->opr[0]));
+	I0OPR* i0_opr1 = (&(i0instr->opr[1]));
+
+	uint8_t tttn;
+
+	x64_OPR* x64_opr0 = (&(x64oprs[0]));
+	x64_OPR* x64_opr1 = (&(x64oprs[1]));
+	x64oprs_tmp[0].type = x64_OPR_TYPE_REG;
+	x64oprs_tmp[0].reg = x64_AX;
+
+	int opr_encoded_reg[2];
+
+	int* opr0_encoded_reg = (&(opr0_encoded_reg[0]));
+	int* opr1_encoded_reg = (&(opr1_encoded_reg[1]));
+
+	int is_less = 0;
+	int is_equal = 0;
+
+	int is_jmp = 0;
+
+	ENCODE_OPR((*i0_opr0), (*x64_opr0), (*opr0_encoded_reg));
+	ENCODE_OPR((*i0_opr1), (*x64_opr1), (*opr1_encoded_reg));
+
+	switch (i0instr->option) {
+	case OPT_B_L:
+		switch (i0instr->attr) {
+		case ATTR_UB:
+		case ATTR_UF:
+		case ATTR_UE:
+			tttn = x64_TTTN_NB;
+			break;
+		case ATTR_SB:
+		case ATTR_SF:
+		case ATTR_SE:
+			tttn = x64_TTTN_NL;
+			break;
+		}
+	case OPT_B_LE:
+		switch (i0instr->attr) {
+		case ATTR_UB:
+		case ATTR_UF:
+		case ATTR_UE:
+			tttn = x64_TTTN_NBE;
+			break;
+		case ATTR_SB:
+		case ATTR_SF:
+		case ATTR_SE:
+			tttn = x64_TTTN_NLE;
+			break;
+		}
+	case OPT_B_E:
+		tttn = x64_TTTN_NZ;
+		break;
+	case OPT_B_NE:
+		tttn = x64_TTTN_Z;
+		break;
+	case OPT_B_SL:
+		error("opt_b_sl not implemented!");
+		break;
+	}
+
+	if (((i0_opr0->addrm)<(i0_opr1->addrm)) || ((x64_opr0->type) < (x64_opr1->type))) {
+		x64_opr0 = (&(x64oprs[1]));
+		x64_opr1 = (&(x64oprs[0]));
+		x64_opr0 = (&(x64oprs[1]));
+		x64_opr1 = (&(x64oprs[0]));
+		opr0_encoded_reg = (&(opr0_encoded_reg[1]));
+		opr1_encoded_reg = (&(opr0_encoded_reg[0]));
+		if ((tttn != x64_TTTN_Z) && (tttn != x64_TTTN_NZ)) {
+			tttn ^= 1;
+		}
+	}
+	if ((x64_opr0->type) == x64_OPR_I) {
+		switch (i0instr->attr) {
+		case ATTR_SB:
+			is_less = (((int8_t) (x64_opr0->imm.v8)) < ((int8_t) (x64_opr1->imm.v8)));
+			is_equal = (((int8_t) (x64_opr0->imm.v8)) == ((int8_t) (x64_opr1->imm.v8)));
+			break;
+		case ATTR_UB:
+			is_less = (((uint8_t) (x64_opr0->imm.v8)) < ((uint8_t) (x64_opr1->imm.v8)));
+			is_equal = (((uint8_t) (x64_opr0->imm.v8)) == ((uint8_t) (x64_opr1->imm.v8)));
+			break;
+		case ATTR_SF:
+			is_less = (((int32_t) (x64_opr0->imm.v32)) < ((int32_t) (x64_opr1->imm.v32)));
+			is_equal = (((int32_t) (x64_opr0->imm.v32)) == ((int32_t) (x64_opr1->imm.v32)));
+			break;
+		case ATTR_UF:
+			is_less = (((uint32_t) (x64_opr0->imm.v32)) < ((uint32_t) (x64_opr1->imm.v32)));
+			is_equal = (((uint32_t) (x64_opr0->imm.v32)) == ((uint32_t) (x64_opr1->imm.v32)));
+			break;
+		case ATTR_SE:
+			is_less = (((int64_t) (x64_opr0->imm.v64)) < ((int64_t) (x64_opr1->imm.v64)));
+			is_equal = (((int64_t) (x64_opr0->imm.v64)) == ((int64_t) (x64_opr1->imm.v64)));
+			break;
+		case ATTR_UE:
+			is_less = (((uint64_t) (x64_opr0->imm.v64)) < ((uint64_t) (x64_opr1->imm.v64)));
+			is_equal = (((uint64_t) (x64_opr0->imm.v64)) == ((uint64_t) (x64_opr1->imm.v64)));
+			break;
+		}
+		switch (i0instr->option) {
+		case OPT_B_LE:
+			if (is_equal) {
+				is_jmp = 1;
+				break;
+			}
+		case OPT_B_L:
+			if (is_less) {
+				is_jmp = 1;
+			}
+			break;
+		case OPT_B_E:
+			is_jmp = is_equal;
+			break;
+		case OPT_B_NE:
+			is_jmp = (!is_equal);
+			break;
+		}
+		if (is_jmp) {
+			x64EncodeCallAbsImm64(nativeblock, nativelimit, (i0instr->opr[2].val.v64), is_write);
+			RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_JMP, (*nativelimit) - 12);
+		} else {
+			RETURN_DECODE_STATUS(I0_TRANS_SUCCESS_NO_FURTHER_PROC, 0, 0);
+		}
+	}
+
+	if ((x64_opr1->type) != x64_OPR_TYPE_M) {
+		if (!(*opr0_encoded_reg)) {
+			ZEROOUT_x64_INSTR();
+			if ((i0_opr0->addrm) == ADDRM_ABSOLUTE) {
+				x64oprs_tmp[1].type = x64_OPR_I;
+				x64oprs_tmp[1].imm.v64 = (i0_opr0->val.v64);
+				x64EncodeMovGI(x64instrs + (instr_cnt++), x64oprs_tmp[0], x64oprs_tmp[1], TYPE_ID_QWORD);
+			} else {
+				x64EncodeMovMI64ToAX(x64instrs + (instr_cnt++), (i0_opr0->val.v64), TYPE_ID_QWORD);
+			}
+			(x64_opr0->reg) = x64_AX;
+		}
+		ZEROOUT_x64_INSTR();
+		if ((x64_opr1->type) == x64_OPR_I) {
+			if ((I0OprISize[i0instr->attr] == TYPE_ID_QWORD) && (!(WITHIN64_32BIT(x64_opr1->imm.v64)))) {
+				x64oprs_tmp[2].type = x64_OPR_TYPE_REG;
+				x64oprs_tmp[2].reg = x64_DX;
+				x64EncodeMovGI(x64instrs + (instr_cnt++), x64oprs_tmp[2], (*x64_opr1), I0OprISize[i0instr->attr]);
+				ZEROOUT_x64_INSTR();
+				x64EncodeAluEG(x64instrs + (instr_cnt++), x64_ALU_OP_ID_CMP, (*x64_opr0), x64oprs_tmp[2], I0OprISize[i0instr->attr]);
+			} else {
+				x64EncodeAluEI(x64instrs + (instr_cnt++), x64_ALU_OP_ID_CMP, (*x64_opr0), (*x64_opr1), I0OprISize[i0instr->attr]);
+			}
+		} else {
+			x64EncodeAluEG(x64instrs + (instr_cnt++), x64_ALU_OP_ID_CMP, (*x64_opr0), (*x64_opr1), I0OprISize[i0instr->attr]);
+		}
+	}
+	else
+	{
+		if((i0_opr1->addrm) == ADDRM_ABSOLUTE)
+		{
+			ZEROOUT_x64_INSTR();
+			x64EncodeMovMI64ToAX(x64instrs+(instr_cnt++), (i0_opr1->val.v64), I0OprISize[i0instr->attr]);	
+			x64_opr1->type = x64_OPR_TYPE_REG;
+			x64_opr1->reg = x64_AX;
+			if(!(*opr0_encoded_reg))
+			{
+				ZEROOUT_x64_INSTR();
+				if((i0_opr0->addrm) == ADDRM_ABSOLUTE)
+				{
+					x64oprs_tmp[1].type = x64_OPR_I;
+					x64oprs_tmp[1].imm.v64 = (i0_opr0->val.v64);
+					x64oprs_tmp[2].type = x64_OPR_TYPE_REG;
+					x64oprs_tmp[2].reg = x64_SI;
+					(x64_opr0->reg) = x64_SI;
+					x64EncodeMovGI(x64instrs+(instr_cnt++), x64oprs_tmp[2], x64oprs_tmp[1], TYPE_ID_QWORD);
+				}
+				else
+				{
+					x64_opr1->reg = x64_DX;
+					x64_opr0->reg = x64_AX;
+					x64EncodeMovEG(x64instrs+(instr_cnt++), (*x64_opr1), x64oprs_tmp[0],I0OprISize[i0instr->attr]);
+					ZEROOUT_x64_INSTR();
+					x64EncodeMovMI64ToAX(x64instrs+(instr_cnt++), (i0_opr0->val.v64), I0OprISize[i0instr->attr]);
+				}
+			}
+			ZEROOUT_x64_INSTR();
+			x64EncodeAluEG(x64instrs+(instr_cnt++), x64_ALU_OP_ID_CMP, (*x64_opr0), (*x64_opr1), I0OprISize[i0instr->attr]);
+		}
+		else
+		{
+			if(!(*opr0_encoded_reg))
+			{
+				x64_opr0->reg = x64_AX;
+				ZEROOUT_x64_INSTR();
+				x64EncodeMovMI64ToAX(x64instrs+(instr_cnt++), (i0_opr0->val.v64), TYPE_ID_QWORD);	
+			}
+			x64oprs_tmp[1].type = x64_OPR_TYPE_REG;
+			x64oprs_tmp[1].reg = x64_DX;
+			ZEROOUT_x64_INSTR();
+			x64EncodeMovGE(x64instrs+(instr_cnt++), x64oprs_tmp[1], (*x64_opr0), I0OprISize[i0instr->attr]);
+			if(!(*opr1_encoded_reg))
+			{
+				x64_opr1->reg = x64_AX;
+				if((i0_opr0->val.v64) != (i0_opr1->val.v64))
+				{
+					ZEROOUT_x64_INSTR();
+					x64EncodeMovMI64ToAX(x64instrs+(instr_cnt++), (i0_opr1->val.v64), TYPE_ID_QWORD);
+				}
+			}
+			ZEROOUT_x64_INSTR();
+			x64EncodeAluGE(x64instrs+(instr_cnt++),x64_ALU_OP_ID_CMP, (*x64_opr0), (*x64_opr1), I0OprISize[i0instr->attr]);
+		}
+	}
+	ZEROOUT_x64_INSTR();
+	x64EncodeJmpCcRel32(x64instrs+(instr_cnt++), tttn, 12);
+	Writex64Instrs(x64instrs, instr_cnt, nativeblock, nativelimit, is_write);
+	x64EncodeCallAbsImm64(nativeblock, nativelimit, i0instr->opr[2].val.v64, is_write);
+	RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_JCC, (*nativelimit) -12);
+}
 
 void TranslateAluOp(I0INSTR* instr, uint8_t** tpc, uint8_t op) {
 	x64_OPR x64oprs[3];

@@ -869,6 +869,10 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			}
 			(*spc) += BYTE_OP_BJ;
 			GET_INST_OPR_I64((instr.opr[0]), (*spc));
+			if((instr.ra) == RA_B_JUMP_R)
+			{
+				(instr.opr[0].val.v64) += ((uint64_t)(*spc));
+			}
 			return TranslateBJ(&instr, tpc, nativelimit, is_write);
 			break;
 		case OPT_B_L:
@@ -902,6 +906,10 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			DECODE_OPR_D(instr.opr[0], *spc, instr.opr[0].addrm, instr.attr);
 			DECODE_OPR_D(instr.opr[1], *spc, instr.opr[1].addrm, instr.attr);
 			GET_INST_OPR_I64((instr.opr[2]), (*spc));
+			if((instr.ra) == RA_B_JUMP_R)
+			{
+				(instr.opr[2].val.v64) += ((uint64_t)(*spc));
+			}
 			return TranslateBCMP(&instr, tpc, nativelimit, is_write);
 			break;
 		case OPT_B_Z:
@@ -925,6 +933,10 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativel
 			(*spc) += BYTE_OP_BZNZ;
 			DECODE_OPR_D(instr.opr[0], *spc, instr.opr[0].addrm, instr.attr);
 			GET_INST_OPR_I64((instr.opr[2]), (*spc));
+			if((instr.ra) == RA_B_JUMP_R)
+			{
+				(instr.opr[2].val.v64) += ((uint64_t)(*spc));
+			}
 			return TranslateBZNZ(&instr, tpc, nativelimit, is_write);
 			break;
 		case OPT_B_IJ:

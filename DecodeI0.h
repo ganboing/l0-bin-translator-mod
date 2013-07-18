@@ -111,6 +111,9 @@ typedef struct _DECODE_STATUS{
 	unsigned long detail2;
 }DECODE_STATUS;
 
+#define RETURN_DECODE_STATUS(status, detail, detail2) \
+	do{ DECODE_STATUS result= {(status), (detail), (detail2)}; return result;}while(0)
+
 DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t** tpc, uint8_t* nativelimit, uint8_t* i0limit, unsigned int is_write) ;
 
 #endif /* DECODEI0_H_ */

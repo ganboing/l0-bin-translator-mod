@@ -74,8 +74,8 @@
 #define SIZE_S				0x10
 
 #define JUMP_UNDEFINED		-1
-#define JUMP_R				1
-#define JUMP_A				0
+#define RA_B_JUMP_R				1
+#define RA_B_JUMP_A				0
 
 
 #define BIT_LEN_UNDEFINED		-1
