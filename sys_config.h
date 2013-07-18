@@ -11,6 +11,7 @@
 // #define VPCID_IP_PREFIX_13 1
 #define VPCID_IP_PREFIX_8 1
 
+#define IJ_TABLE_SIZE 0x4000
 // *************************
 // Scheduler
 

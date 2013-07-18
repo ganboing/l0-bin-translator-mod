@@ -10,6 +10,7 @@
 #include "rbtree.h"
 #include "DecodeI0.h"
 #include "NativeCodeBlock.h"
+#include "sys_config.h"
 
 #ifndef offsetof
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
@@ -48,7 +49,6 @@ static struct rb_root GlobalNCDescRbRoot;
 static NativeCodeBlockDesc* GlobalNCDescFirst;
 static NativeCodeBlockDesc* GlobalNCDescLast;
 
-#define IJ_TABLE_SIZE 0x4000
 
 STPC_HASH_TABLE_ENTRY IndirJmpHashTab[IJ_TABLE_SIZE];
 

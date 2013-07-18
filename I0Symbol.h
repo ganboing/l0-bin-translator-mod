@@ -103,6 +103,8 @@
 #define BYTE_OP_SCMP			0x04
 
 
+#define IJ_TABLE_SIZE 0x4000
+
 //#define DECODE_I0_DEBUG
 
 #endif /* I0SYMBOL_H_ */
