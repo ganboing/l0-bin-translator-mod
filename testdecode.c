@@ -2,6 +2,7 @@
 #include "I0Symbol.h"
 #include "ASM_MACROS.h"
 #include "DecodeStatus.h"
+#include "DecodeI0.h"
 
 #ifdef MSVC
 #define typeof(a) uint8_t*
@@ -126,38 +127,6 @@
 		}\
 	}while(0)
 
-typedef union _OPRVAL {
-	uint8_t v8;
-	uint16_t v16;
-	uint32_t v32;
-	uint64_t v64;
-}OPRVAL;
-
-typedef struct _I0OPR {
-	OPRVAL val;
-	uint32_t addrm;
-	uint32_t disp32;
-}I0OPR;
-
-typedef struct _I0INSTR {
-	uint64_t addr;
-	uint32_t addr_size_mode;
-	uint32_t opcode;
-	uint32_t attr;
-	uint32_t attr2;
-	uint32_t option;
-	uint32_t ra;
-	I0OPR opr[5];
-}I0INSTR;
-
-typedef struct _DECODE_STATUS{
-	unsigned long status;
-	unsigned long detail;
-	unsigned long detail2;
-}DECODE_STATUS;
-
-#define RETURN_DECODE_STATUS(status, detail, detail2) \
-	do{ DECODE_STATUS result= {(status), (detail), (detail2)}; return result;}while(0)
 
 //I0OprISize[attr]
 static uint8_t I0OprISize[0x10]=
@@ -701,100 +670,7 @@ inline static void EncodeMovMToR_QWORD(uint8_t** tpc, uint8_t reg, uint8_t base,
 	}
 }
 
-DECODE_STATUS TranslateNOP_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateADD_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateSUB_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateMUL_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateDIV_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBJ_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBL_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBLE_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBE_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBNE_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBZ_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBNZ_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBSL_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBIJ_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateAND_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateOR_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateXOR_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateCONV_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateINT_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateSPAWN_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateSHIFT_NW(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateSCMP_NW(I0INSTR*, uint8_t**, uint8_t*);
-static DECODE_STATUS TranslateEXIT_NW(I0INSTR*, uint8_t**, uint8_t*);
-
-DECODE_STATUS TranslateNOP_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateADD_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateSUB_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateMUL_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateDIV_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBJ_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBL_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBLE_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBE_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBNE_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBZ_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBNZ_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBSL_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateBIJ_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateAND_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateOR_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateXOR_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateCONV_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateINT_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateSPAWN_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateSHIFT_WR(I0INSTR*, uint8_t**, uint8_t*);
-DECODE_STATUS TranslateSCMP_WR(I0INSTR*, uint8_t**, uint8_t*);
-static DECODE_STATUS TranslateEXIT_WR(I0INSTR*, uint8_t**, uint8_t*);
-
 void sys_back_runner_wrapper(void);
-
-static inline DECODE_STATUS TranslateEXIT_WR(I0INSTR* instr, uint8_t** tpc, uint8_t* nativelimit)
-{
-	//movl $option, %edi
-	//movl $back_runner_wrapper, %eax
-	//jmp *%rax
-	unsigned long nativelen = (((unsigned long)nativelimit)-((unsigned long)(*tpc)));
-	if(nativelen<0x0c)
-	{
-		RETURN_DECODE_STATUS(NATIVE_CODE_SEGMENT_LIMIT, 0);
-	}
-	else
-	{
-		(*((*tpc)++)) = 0xbf;
-		(*((uint32_t*)(*tpc))) = instr->option;
-		(*tpc) += 4;
-		(*((*tpc)++)) = 0xb8;
-		(*((uint32_t*)(*tpc))) = ((uint32_t)sys_back_runner_wrapper);
-		(*tpc) += 4;
-		(*((uint16_t*)(*tpc))) = 0xe0ff;
-		(*tpc) += 2;
-		RETURN_DECODE_STATUS(I0_DECODE_SUCCESSFUL, 0);
-	}
-}
-
-static inline DECODE_STATUS TranslateEXIT_NW(I0INSTR* instr, uint8_t** tpc, uint8_t* nativelimit)
-{
-	(void)instr;
-	unsigned long nativelen = (((unsigned long)nativelimit)-((unsigned long)(*tpc)));
-	if(nativelen<0x0c)
-	{
-		RETURN_DECODE_STATUS(NATIVE_CODE_SEGMENT_LIMIT, 0);
-	}
-	else
-	{
-		(*tpc) += 0x0c;
-		RETURN_DECODE_STATUS(I0_DECODE_SUCCESSFUL, 0);
-	}
-
-}
-
-inline DECODE_STATUS TranslateALU_WR(I0INSTR* i0instr, uint8_t** tpc, uint8_t* nativelimit)
-{
-
-}
 
 DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t* tpc, uint64_t* nativelimit, uint8_t* i0limit, unsigned int is_write) {
 	I0INSTR instr;

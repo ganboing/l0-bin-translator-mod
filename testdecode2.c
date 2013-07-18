@@ -6,6 +6,7 @@
 #include "I0Types.h"
 #include "sys_config.h"
 #include "DecodeStatus.h"
+#include "DecodeI0.h"
 #include "x64Encode.h"
 #include "x64Encode.c"
 
@@ -152,6 +153,66 @@ DECODE_STATUS TranslateINT(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nat
 }
 
 //typedef struct DECODE_STATUS ;
+DECODE_STATUS TranslateBJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
+{
+	x64EncodeCallAbsImm64(nativeblock, nativelimit, (i0instr->opr[0].val.v64), is_write);
+	RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_JMP, (*nativelimit) -12);
+}
+
+DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
+{
+	//25 ?? ?? ?? ??		andl $0x(cnt_of_ijtab-1), %eax 
+	//c1 e0 03				shll $0x03, %eax
+	//48 8d bc 40 ??x4		leaq ijtab_addr(%rax, %rax, 2), %rdi
+	//48 3b 37				cmpq (%rdi), %rsi
+	//75 05					jne .+5
+	//ff 67 08				jmpq *0x08(%rdi)
+	//eb 07					jmp .+7
+	//b8 ??x4				movl hash_tab_miss_handler, %eax
+	//ff e0					jmpq *%rax
+	static const uint8_t and_eax_opcode[1] = {0x25};
+	static const uint8_t shl_eax_3_lea_3rax_op[7] = {0xc1, 0xe0, 0x03, 0x48, 0x8d, 0xbc, 0x40};
+	static const uint8_t rest1[11] = {};
+	static const uint8_t jmpq_rax[2] = {0xff, 0xe0};
+	//read dest addr to %rax
+	I0OPR* i0_opr = (&(i0instr->opr[0]));
+	x64INSTR x64instrs[20];
+	uint32_t instr_cnt = 0;
+	x64_OPR x64oprs[3];
+	x64_OPR x64oprs_tmp[3];
+	x64oprs_tmp[0].type = x64_OPR_TYPE_REG;
+	x64oprs_tmp[0].reg = x64_AX;
+	x64oprs_tmp[0].type = x64_OPR_TYPE_REG;
+	x64oprs_tmp[0].reg = x64_SI;
+	uint32_t opr_encoded_reg[1];
+	ENCODE_OPR((*i0_opr), x64oprs[0], opr_encoded_reg[0]);
+	do{
+		if(!(opr_encoded_reg[0]))
+		{
+			ZEROOUT_x64_INSTR();
+			x64EncodeMovMI64ToAX(x64instrs+(instr_cnt++), (i0_opr->val.v64), TYPE_ID_QWORD);
+			x64oprs[0].reg = x64_AX;
+			if((i0_opr->addrm) == ADDRM_ABSOLUTE)
+			{
+				x64oprs[0].type = x64_OPR_TYPE_REG;
+				break;
+			}
+		}
+		ZEROOUT_x64_INSTR();
+		x64EncodeMovGE(x64instrs+(instr_cnt++), x64oprs_tmp[0], x64oprs[0], TYPE_ID_QWORD);
+	}while(0);
+	ZEROOUT_x64_INSTR();
+	x64EncodeMovEG(x64instrs+(instr_cnt++), x64oprs_tmp[1], x64oprs_tmp[0], TYPE_ID_QWORD);
+	Writex64Instrs(x64instrs, instr_cnt, nativeblock, nativelimit, is_write);
+	if(is_write)
+	{
+		
+	}
+	else
+	{
+		(*nativelimit) += (
+	}
+}
 
 DECODE_STATUS TranslateBZNZ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
 {
@@ -949,6 +1010,7 @@ DECODE_STATUS TranslateSCMP(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit,
 }
 
 */
+
 
 
 uint64_t run_i0_code2(uint64_t __tmp__)
