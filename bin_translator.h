@@ -1,8 +1,6 @@
 #ifndef _BIN_TRANSLATOR_H_
 #define _BIN_TRANSLATOR_H_
 
-#include "DecodeI0.h"
-
 enum {
     TRAMP_TYPE_JMP = 0,
     TRAMP_TYPE_JCC = 1,
@@ -15,6 +13,36 @@ enum {
 
 // jump table waiting list
 #define WAITING_LIST_SIZE (0x1024)
+
+#define MAX_OPR_NUM 5
+
+typedef struct _instr_t {
+    // unsigned int l1; // obsolete
+    // unsigned int l2; // obsolete
+    uint64_t addr;
+    uint32_t addr_size_mode;
+    uint32_t opcode;
+    uint32_t option;
+    uint32_t mattr1;
+    uint32_t mattr2;
+    uint32_t addrm1;
+    uint32_t addrm2;
+    uint32_t addrm3;
+    uint32_t addrm4;
+    uint32_t attr;
+    uint32_t ra;
+    uint64_t opr1;
+    uint32_t disp1;
+    uint64_t opr2;
+    uint32_t disp2;
+    uint64_t opr3;
+    uint32_t disp3;
+    uint64_t opr4;
+    uint32_t disp4;
+    uint32_t addrms[MAX_OPR_NUM];
+    uint64_t oprs[MAX_OPR_NUM];
+    uint32_t disps[MAX_OPR_NUM];
+} instr_t;
 
 // note: < 2^8-1
 enum {
@@ -92,8 +120,6 @@ int translate_i0_code(
         char *trampoline, uint64_t *trampoline_len);
 uint64_t run_i0_code(uint64_t fi);
 int load_i0_code(char *file, char *i0_code, uint64_t *i0_code_len);
-inline void translate2x86_64_read_reg_file_base_disp(uint64_t opr, uint32_t disp, uint32_t reg, char *n, uint64_t *nl, int is_write_n, unsigned int mattr);
-
 
 #endif // _BIN_TRANSLATOR_H_
 
