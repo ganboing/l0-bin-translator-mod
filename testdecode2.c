@@ -3,62 +3,13 @@
 #include <string.h>
 #include <errno.h>
 #include "I0Symbol.h"
-#include "DecodeI0.h"
+#include "I0Types.h"
+#include "sys_config.h"
 #include "DecodeStatus.h"
+#include "x64Encode.h"
+#include "x64Encode.c"
 
-#define x64_ALU_OP_ID_ADD		0
-#define x64_ALU_OP_ID_OR		1
-#define x64_ALU_OP_ID_ADC		2
-#define x64_ALU_OP_ID_SBB		3
-#define x64_ALU_OP_ID_AND		4
-#define x64_ALU_OP_ID_SUB		5
-#define x64_ALU_OP_ID_XOR		6
-#define x64_ALU_OP_ID_CMP		7
-
-#define x64_TTTN_O				0
-#define x64_TTTN_NO				1
-#define x64_TTTN_B				2
-#define x64_TTTN_NB				3
-#define x64_TTTN_Z				4
-#define x64_TTTN_NZ				5
-#define x64_TTTN_BE				6
-#define x64_TTTN_NBE			7
-#define x64_TTTN_S				8
-#define x64_TTTN_NS				9
-#define x64_TTTN_P				10
-#define x64_TTTN_NP				11
-#define x64_TTTN_L				12
-#define x64_TTTN_NL				13
-#define x64_TTTN_LE				14
-#define x64_TTTN_NLE			15
-
-#define x64_AX 0
-#define x64_CX 1
-#define x64_DX 2
-#define x64_BX 3
-#define x64_SP 4
-#define x64_BP 5
-#define x64_SI 6
-#define x64_DI 7
-#define x64_R8 8
-#define x64_R9 9
-#define x64_R10 10
-#define x64_R11 11
-#define x64_R12 12
-#define x64_R13 13
-#define x64_R14 14
-#define x64_R15 15
-
-#define REX_B_BIT 0
-#define REX_X_BIT 1
-#define REX_R_BIT 2
-#define REX_W_BIT 3
-
-#define ZEROOUT_x64_INSTR() \
-	do{memset((char*)(x64instrs + instr_cnt),0,sizeof(x64INSTR));}while(0)
-
-
-uint8_t i0_x64_reg_map[0x08]=
+static uint8_t i0_x64_reg_map[0x08]=
 {
 	x64_BX,
 	x64_CX,
@@ -70,27 +21,11 @@ uint8_t i0_x64_reg_map[0x08]=
 	x64_R8
 };
 
-#define WITHIN64_8BIT(val) \
-	(((int64_t)val) == ((int64_t)((int8_t)((uint8_t)((uint64_t)(val))))))
-
-#define WITHIN64_32BIT(val) \
-	(((int64_t)val) == ((int64_t)((int32_t)((uint32_t)((uint64_t)(val))))))
-
-#define WITHIN32_8BIT(val) \
-	(((int32_t)val) == ((int32_t)((int8_t)((uint8_t)((uint32_t)(val))))))
-
-#define TYPE_ID_BYTE 0
-#define TYPE_ID_DWORD 1
-#define TYPE_ID_QWORD 2
-#define TYPE_ID_OWORD 3
-
-#define I0_REGISTER_BASE	0x400000000ULL
-
-__inline int IS_I0_REGISTER_FILE(uint64_t i0addr)
+__inline static int IS_I0_REGISTER_FILE(uint64_t i0addr)
 {
-	if(i0addr>(I0_REGISTER_BASE))
+	if(i0addr>(REG_FILE_BEGIN))
 	{
-		if(((i0addr-I0_REGISTER_BASE)/(8ULL))<(8ULL))
+		if(((i0addr-REG_FILE_BEGIN)/(8ULL))<(8ULL))
 		{
 			return 1;
 		}
@@ -98,9 +33,9 @@ __inline int IS_I0_REGISTER_FILE(uint64_t i0addr)
 	return 0;
 }
 
-__inline uint8_t MAP_TO_NATIVE_REGISTER(uint64_t i0addr)
+__inline static uint8_t MAP_TO_NATIVE_REGISTER(uint64_t i0addr)
 {
-	return (i0_x64_reg_map[((i0addr)-I0_REGISTER_BASE)/(8ULL)]);
+	return (i0_x64_reg_map[((i0addr)-REG_FILE_BEGIN)/(8ULL)]);
 }
 
 static uint8_t I0OprISize[0x10]=
@@ -116,614 +51,6 @@ static uint8_t I0OprISize[0x10]=
 	TYPE_ID_DWORD,
 	TYPE_ID_QWORD,
 };
-
-__inline  uint8_t EncodeModRM(uint8_t mod, uint8_t rm, uint8_t reg)
-{
-	uint8_t modrm = ((mod<<6)|(reg<<3)|rm);
-	return modrm;
-}
-__inline  uint8_t EncodeSIB(uint8_t ss, uint8_t idx, uint8_t base)
-{
-	uint8_t sib = ((ss<<6)|(idx<<3)|base);
-	return sib;
-}
-__inline static void x64EncodeFillOpr(x64INSTR* instr, x64_OPR G, x64_OPR E)
-{
-	instr->ModRM_SIB_len = 1;
-	if((E.reg)>=0x08)
-	{
-		instr->REX |= (1<<REX_B_BIT);
-		(E.reg) &= 0x07;
-	}
-	if((G.reg)>=0x08)
-	{
-		instr->REX |= (1<<REX_R_BIT);
-		(G.reg) &= 0x07;
-	}
-	if(E.type == x64_OPR_TYPE_REG)
-	{
-		instr->ModRM_SIB[0] = EncodeModRM(0x03, E.reg, G.reg);
-	}
-	else
-	{
-		if(E.off32)
-		{
-			if(WITHIN32_8BIT(E.off32))
-			{
-				instr->ModRM_SIB[0] = EncodeModRM(1,(E.reg),(G.reg));
-				instr->disp_len = 1;
-				instr->disp.v8 = ((uint8_t)(E.off32));
-			}
-			else
-			{
-				instr->ModRM_SIB[0] = EncodeModRM(2,(E.reg),(G.reg));
-				instr->disp_len = 4;
-				instr->disp.v32 = E.off32;
-			}
-		}
-		else
-		{
-			if((E.reg) == x64_BP)
-			{
-				instr->ModRM_SIB[0] = EncodeModRM(1,(E.reg),(G.reg));
-				instr->disp_len = 1;
-				instr->disp.v8 = 0;
-			}
-			else
-			{
-				instr->ModRM_SIB[0] = EncodeModRM(0,(E.reg),(G.reg));
-			}
-		}
-	}
-}
-
-#define x64EncodeModRM_RR(src, dest) \
-({\
-	if(src>=0x08)\
-	{\
-		rex |= (1<<REX_R_BIT);\
-		src &= 0x07;\
-	}\
-	if(dest>=0x08)\
-	{\
-		rex |= (1<<REX_B_BIT);\
-		dest &= 0x07;\
-	}\
-	EncodeModRM(0x03, dest, src);\
-})
-
-#define x64EncodeModRM_Prep(base, reg) \
-do{\
-	if(reg>=0x08)\
-	{\
-		rex |= (1<<REX_R_BIT);\
-		reg &= (0x07);\
-	}\
-	if(base>=0x08)\
-	{\
-		rex |= (1<<REX_B_BIT);\
-		base &= 0x07;\
-	}\
-}while(0)
-__inline void x64EncodeMovMI64ToAX(x64INSTR* instr, uint64_t moffs,uint8_t oprsize)
-{
-	instr->opcode_len = 1;
-	switch(oprsize)
-	{
-	case TYPE_ID_BYTE:
-		instr->opcode[0] = 0xa0;
-		break;
-	case TYPE_ID_DWORD:
-		instr->opcode[0] = 0xa1;
-		break;
-	case TYPE_ID_QWORD:
-		instr->opcode[0] = 0xa1;
-		instr->REX = (1<<REX_W_BIT);
-		break;
-	}
-	instr->imm.v64 = moffs;
-	instr->imm_len = 8;
-}
-__inline void x64EncodeMovAXToMI64(x64INSTR* instr, uint64_t moffs,uint8_t oprsize)
-{
-	instr->opcode_len = 1;
-	switch(oprsize)
-	{
-	case TYPE_ID_BYTE:
-		instr->opcode[0] = 0xa2;
-		break;
-	case TYPE_ID_DWORD:
-		instr->opcode[0] = 0xa3;
-		break;
-	case TYPE_ID_QWORD:
-		instr->opcode[0] = 0xa3;
-		instr->REX = (1<<REX_W_BIT);
-		break;
-	}
-	instr->imm.v64 = moffs;
-	instr->imm_len = 8;
-}
-__inline void x64EncodeMovGE(x64INSTR* instr, x64_OPR G, x64_OPR E, uint8_t oprsize)
-{
-	instr->opcode_len = 1;
-	switch(oprsize)
-	{
-	case TYPE_ID_BYTE:
-		instr->opcode[0] = 0x8a;
-		break;
-	case TYPE_ID_DWORD:
-		instr->opcode[0] = 0x8b;
-		break;
-	case TYPE_ID_QWORD:
-		instr->opcode[0] = 0x8b;
-		instr->REX = (1<<REX_W_BIT);
-		break;
-	}
-	x64EncodeFillOpr(instr, G, E);
-}
-__inline void x64EncodeMovEG(x64INSTR* instr, x64_OPR E, x64_OPR G, uint8_t oprsize)
-{
-	instr->opcode_len = 1;
-	switch(oprsize)
-	{
-	case TYPE_ID_BYTE:
-		instr->opcode[0] = 0x88;
-		break;
-	case TYPE_ID_DWORD:
-		instr->opcode[0] = 0x89;
-		break;
-	case TYPE_ID_QWORD:
-		instr->opcode[0] = 0x89;
-		instr->REX = (1<<REX_W_BIT);
-		break;
-	}
-	x64EncodeFillOpr(instr, G, E);
-}
-__inline void x64EncodeMovEI(x64INSTR* instr,  x64_OPR E, x64_OPR I, uint8_t oprsize)
-{
-	x64_OPR G;
-	instr->opcode_len = 1;
-	switch(oprsize)
-	{
-	case TYPE_ID_BYTE:
-		instr->opcode[0] = 0xc6;
-		instr->imm_len = 1;
-		instr->imm.v8 = I.imm.v8;
-		break;
-	case TYPE_ID_DWORD:
-		instr->opcode[0] = 0xc7;
-		instr->imm_len = 4;
-		instr->imm.v32 = I.imm.v32;
-		break;
-	case TYPE_ID_QWORD:
-		instr->opcode[0] = 0xc7;
-		instr->REX = (1<<REX_W_BIT);
-		instr->imm_len = 4;
-		instr->imm.v32 = I.imm.v32;
-		//sign-extended here!
-		break;
-	}
-	G.reg = 0;
-	x64EncodeFillOpr(instr, G, E);
-}
-__inline void x64EncodeMovGI(x64INSTR* instr, x64_OPR G, x64_OPR I,uint8_t oprsize)
-{
-	instr->opcode_len = 1;
-	if((G.reg)>=0x08)
-	{
-		instr->REX = (1<<REX_B_BIT);
-		(G.reg) &= 0x07;
-	}
-	switch(oprsize)
-	{
-	case TYPE_ID_BYTE:
-		instr->opcode[0] = (0xb0 | (G.reg) );
-		instr->imm_len = 1;
-		instr->imm.v8 = I.imm.v8;
-		break;
-	case TYPE_ID_DWORD:
-		instr->opcode[0] = (0xb8 | (G.reg) );
-		instr->imm_len = 4;
-		instr->imm.v32 = I.imm.v32;
-		break;
-	case TYPE_ID_QWORD:
-		if(WITHIN64_32BIT(I.imm.v64))
-		{
-			x64EncodeMovEI(instr,G,I,oprsize);
-			return;
-		}
-		else
-		{
-			instr->opcode[0] = (0xb8 | (G.reg) );
-			instr->REX |= (1<<REX_W_BIT);
-			instr->imm_len = 8;
-			instr->imm.v64 = I.imm.v64;
-		}
-		break;
-	}
-}
-
-__inline void x64EncodeAluGE(x64INSTR* instr, uint8_t op, x64_OPR G, x64_OPR E, uint8_t oprsize)
-{
-	op <<= 3;
-	instr->opcode_len = 1;
-	switch(oprsize)
-	{
-	case TYPE_ID_BYTE:
-		instr->opcode[0] = op + 2;
-		break;
-	case TYPE_ID_DWORD:
-		instr->opcode[0] = op + 3;
-		break;
-	case TYPE_ID_QWORD:
-		instr->REX = (1<<REX_W_BIT);
-		instr->opcode[0] = op + 3;
-	}
-	x64EncodeFillOpr(instr, G, E);
-}
-__inline void x64EncodeAluEG(x64INSTR* instr, uint8_t op, x64_OPR E, x64_OPR G, uint8_t oprsize)
-{
-	op <<= 3;
-	instr->opcode_len = 1;
-	switch(oprsize)
-	{
-	case TYPE_ID_BYTE:
-		instr->opcode[0] = op;
-		break;
-	case TYPE_ID_DWORD:
-		instr->opcode[0] = op + 1;
-		break;
-	case TYPE_ID_QWORD:
-		instr->REX = (1<<REX_W_BIT);
-		instr->opcode[0] = op + 1;
-	}
-	x64EncodeFillOpr(instr, G, E);
-}
-__inline void x64EncodeAluIToAX(x64INSTR* instr, uint8_t op, x64_OPR I, uint8_t oprsize)
-{
-	op <<= 3;
-	instr->opcode_len = 1;
-	switch(oprsize)
-	{
-	case TYPE_ID_BYTE:
-		instr->opcode[0] = op + 4;
-		instr->imm_len = 1;
-		instr->imm.v8 = I.imm.v8;
-		break;
-	case TYPE_ID_DWORD:
-		instr->opcode[0] = op + 5;
-		instr->imm_len = 4;
-		instr->imm.v32 = I.imm.v32;
-		break;
-	case TYPE_ID_QWORD:
-		instr->opcode[0] = op + 5;
-		instr->REX = (1<<REX_W_BIT);
-		instr->imm_len = 4;
-		instr->imm.v32 = I.imm.v32;
-		//sign-extended here!
-	}
-}
-__inline void x64EncodeAluEI(x64INSTR* instr, uint8_t op, x64_OPR E,x64_OPR I, uint8_t oprsize)
-{
-	x64_OPR G;
-	instr->opcode_len = 1;
-	switch(oprsize)
-	{
-	case TYPE_ID_BYTE:
-		instr->opcode[0] = 0x80;
-		instr->imm_len = 1;
-		instr->imm.v8 = I.imm.v8;
-		break;
-	case TYPE_ID_DWORD:
-		if(WITHIN32_8BIT(I.imm.v32))
-		{
-			instr->opcode[0] = 0x83;
-			instr->imm_len = 1;
-			instr->imm.v8 = I.imm.v8;
-		}
-		else
-		{
-			if( (E.type == x64_OPR_TYPE_REG) && (E.reg == x64_AX))
-			{
-				x64EncodeAluIToAX(instr,op,I,oprsize);
-				return;
-			}
-			else
-			{
-				instr->opcode[0] = 0x81;
-				instr->imm_len = 4;
-				instr->imm.v32 = I.imm.v32;
-			}
-		}
-		break;
-	case TYPE_ID_QWORD:
-		instr->REX = (1<<REX_W_BIT);
-		if(WITHIN32_8BIT(I.imm.v32))
-		{
-			instr->opcode[0] = 0x83;
-			instr->imm_len = 1;
-			instr->imm.v8 = I.imm.v8;
-		}
-		else
-		{
-			if( (E.type == x64_OPR_TYPE_REG) && (E.reg == x64_AX))
-			{
-				x64EncodeAluIToAX(instr,op,I,oprsize);
-				return;
-			}
-			else
-			{
-				instr->opcode[0] = 0x81;
-				instr->imm_len = 4;
-				instr->imm.v32 = I.imm.v32;
-			}
-		}
-		break;
-	}
-	G.reg = op;
-	x64EncodeFillOpr(instr, G, E);
-}
-
-__inline void x64EncodeMulDivE(x64INSTR* instr, uint8_t op, x64_OPR E, uint8_t oprsize)
-{
-	x64_OPR G;
-	instr->opcode_len = 1;
-	switch(oprsize)
-	{
-	case TYPE_ID_BYTE:
-		instr->opcode[0] = 0xf6;
-		break;
-	case TYPE_ID_DWORD:
-		instr->opcode[0] = 0xf7;
-		break;
-	case TYPE_ID_QWORD:
-		instr->opcode[0] = 0xf7;
-		instr->REX = (1<<REX_W_BIT);
-		break;
-	}
-	G.reg = op;
-	x64EncodeFillOpr(instr,G,E);
-}
-__inline void x64EncodeIMulGE(x64INSTR* instr, x64_OPR G, x64_OPR E, uint8_t oprsize)
-{
-	instr->opcode_len = 2;
-	instr->opcode[0] = 0x0f;
-	instr->opcode[1] = 0xaf;
-	switch(oprsize)
-	{
-	case TYPE_ID_QWORD:
-		instr->REX = (1<<REX_W_BIT);
-		break;
-	}
-	x64EncodeFillOpr(instr, G, E);
-}
-__inline void x64EncodeIMulGEI(x64INSTR* instr, x64_OPR G, x64_OPR E, x64_OPR I, uint8_t oprsize)
-{
-	instr->opcode_len = 1;
-	if(WITHIN32_8BIT(I.imm.v32))
-	{
-		instr->opcode[0] = 0x6b;
-		instr->imm_len = 1;
-		instr->imm.v8 = I.imm.v8;
-	}
-	else
-	{
-		instr->opcode[0] = 0x69;
-		instr->imm_len = 4;
-		instr->imm.v32 = I.imm.v32;
-	}
-	switch(oprsize)
-	{
-	case TYPE_ID_QWORD:
-		instr->REX = (1<<REX_W_BIT);
-		break;
-	}
-	x64EncodeFillOpr(instr, G, E);
-}
-__inline void x64EncodeJmpRel32(x64INSTR* instr, uint32_t off32)
-{
-	instr->opcode_len = 1;
-	instr->opcode[0] = 0xe9;
-	instr->imm_len = 4;
-	instr->imm.v32 = off32;
-}
-__inline void x64EncodeJmpDirE(x64INSTR* instr,x64_OPR E)
-{
-	x64_OPR G;
-	instr->opcode_len = 1;
-	instr->opcode[0] = 0xff;
-	G.reg = 4;
-	x64EncodeFillOpr(instr,G,E);
-}
-__inline void x64EncodeCallDirE(x64INSTR* instr, x64_OPR E)
-{
-	x64_OPR G;
-	instr->opcode_len = 11;
-	instr->opcode[0] = 0xff;
-	G.reg = 2;
-	x64EncodeFillOpr(instr, G, E);
-}
-__inline void x64EncodeJmpCcRel32(x64INSTR* instr, uint8_t tttn, uint32_t off32)
-{
-	instr->opcode_len = 2;
-	instr->opcode[0] = 0xf0;
-	instr->opcode[1] = 0x80 | tttn;
-	instr->imm_len = 4;
-	instr->imm.v32 = off32;
-}
-__inline void x64EncodeCallAbsImm64(uint8_t* nativeblock, uint64_t* nativelimit, uint64_t addr, int is_write)
-{
-	x64INSTR x64instrs[2];
-	uint32_t instr_cnt = 0;
-	x64_OPR x64oprs_tmp[4];
-	x64oprs_tmp[0].type = x64_OPR_TYPE_REG;
-	x64oprs_tmp[0].reg = x64_AX;
-	x64oprs_tmp[1].type = x64_OPR_I;
-	x64oprs_tmp[1].imm.v64 = addr;
-	ZEROOUT_x64_INSTR();
-	x64EncodeMovGI(x64instrs+ (instr_cnt++), x64oprs_tmp[0], x64oprs_tmp[1], TYPE_ID_QWORD);
-	ZEROOUT_x64_INSTR();
-	x64EncodeCallDirE(x64instrs + (instr_cnt++), x64oprs_tmp[1]);
-	Writex64Instrs(x64instrs, instr_cnt, nativeblock, nativelimit, is_write);
-}
-__inline void x64EncodeMovSx8To32GE(x64INSTR* instr, x64_OPR G, x64_OPR E)
-{
-	instr->opcode_len = 2;
-	instr->opcode[0] = 0x0f;
-	instr->opcode[1] = 0xbe;
-	x64EncodeFillOpr(instr,G,E);
-}
-__inline void x64EncodeMovSx8To64GE(x64INSTR* instr, x64_OPR G, x64_OPR E)
-{
-	instr->opcode_len = 2;
-	instr->REX = (1<<REX_W_BIT);
-	instr->opcode[0] = 0x0f;
-	instr->opcode[1] = 0xbe;
-	x64EncodeFillOpr(instr,G,E);
-}
-__inline void x64EncodeMovSx32To64GE(x64INSTR* instr, x64_OPR G, x64_OPR E)
-{
-	instr->opcode_len = 1;
-	instr->REX = (1<<REX_W_BIT);
-	instr->opcode[0] = 0x63;
-	x64EncodeFillOpr(instr,G,E);
-}
-__inline void x64EncodeMovZx8To32GE(x64INSTR* instr, x64_OPR G, x64_OPR E)
-{
-	instr->opcode_len = 2;
-	instr->opcode[0] = 0x0f;
-	instr->opcode[1] = 0xb6;
-	x64EncodeFillOpr(instr,G,E);
-}
-__inline void x64EncodeMovZx8To64GE(x64INSTR* instr, x64_OPR G, x64_OPR E)
-{
-	instr->opcode_len = 2;
-	instr->REX = (1<<REX_W_BIT);
-	instr->opcode[0] = 0x0f;
-	instr->opcode[1] = 0xb6;
-	x64EncodeFillOpr(instr,G,E);
-}
-__inline void x64EncodeMovZx32To64GE(x64INSTR* instr, x64_OPR G, x64_OPR E)
-{
-	x64EncodeMovGE(instr,G,E,TYPE_ID_DWORD);
-}
-__inline uint8_t Getx64InstrSize(x64INSTR* instr)
-{
-	uint8_t rex_len = 0;
-	if(instr->REX)
-	{
-		rex_len = 1;
-	}
-	else
-	{
-		rex_len = 0;
-	}
-	return(rex_len + (instr->LegacyPrefix_Len) + (instr->opcode_len) + (instr->ModRM_SIB_len) + (instr->disp_len) + (instr->imm_len));
-}
-__inline void x64EncodeNegE(x64INSTR* instr, x64_OPR E, uint8_t oprsize)
-{
-	x64_OPR G;
-	instr->opcode_len = 1;
-	switch(oprsize)
-	{
-	case TYPE_ID_BYTE:
-		instr->opcode[0] = 0xf6;
-		break;
-	case TYPE_ID_DWORD:
-		instr->opcode[0] = 0xf7;
-		break;
-	case TYPE_ID_QWORD:
-		instr->REX = (1<<REX_W_BIT);
-		instr->opcode[0] = 0xf7;
-		break;
-	}
-	G.reg = 0x03;
-	x64EncodeFillOpr(instr,G,E);
-}
-__inline void Writex64Instrs(x64INSTR* instrs,uint32_t instr_cnt, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
-{
-	uint32_t i;
-	for(i=0;i<instr_cnt;i++)
-	{
-		x64INSTR* instr = (&(instrs[i]));
-		if(instr->REX)
-		{
-			if(is_write)
-			{
-				nativeblock[(*nativelimit)++] =( (instr->REX) | 0x40);
-			}
-			else
-			{
-				(*nativelimit) ++;
-			}
-		}
-		if(is_write)
-		{
-			memcpy(nativeblock + (*nativelimit),(&(instr->opcode[0])),instr->opcode_len);
-		}
-		(*nativelimit) += instr->opcode_len;
-		if(is_write)
-		{
-			memcpy(nativeblock + (*nativelimit), (&(instr->ModRM_SIB[0])),instr->ModRM_SIB_len);
-		}
-		(*nativelimit) += instr->ModRM_SIB_len;
-		if(is_write)
-		{
-			memcpy(nativeblock + (*nativelimit), (&(instr->disp)),instr->disp_len);
-		}
-		(*nativelimit) += instr->disp_len;
-		if(is_write)
-		{
-			memcpy(nativeblock + (*nativelimit), (&(instr->imm.v8)),instr->imm_len);
-		}
-		(*nativelimit) += instr->imm_len;
-	}
-}
-typedef struct _IMM_CACHE_REG{
-	uint8_t reg;
-	uint64_t imm;
-}IMM_CACHE_REG;
-typedef struct _MEM_CACHE_REG{
-	uint8_t reg;
-	uint64_t addr;
-}MEM_CACHE_REG;
-
-static __inline int FindImmCache(uint64_t imm,uint8_t* reg, IMM_CACHE_REG* imm_cache,uint8_t num)
-{
-	uint8_t i;
-	for(i=0;i<num;i++)
-	{
-		if(imm_cache[i].imm == imm)
-		{
-			(*reg) = imm_cache[i].reg;
-			return 1;
-		}
-	}
-	return 0;
-}
-
-static __inline int FindMemCache(uint64_t addr,uint8_t* reg, MEM_CACHE_REG* mem_cache,uint8_t num)
-{
-	uint8_t i;
-	for(i=0;i<num;i++)
-	{
-		if(mem_cache[i].addr == addr)
-		{
-			(*reg) = mem_cache[i].reg;
-			return 1;
-		}
-	}
-	return 0;
-}
-
-static __inline int FindMemOperandFromCache(uint64_t addr,x64_OPR* M, MEM_CACHE_REG* mem_cache,uint8_t mem_cache_num, IMM_CACHE_REG* imm_cache,uint8_t imm_cache_num)
-{
-
-}
-
-#define OPR3_ADDRM_ID(addrm1,addrm2,addrm3) \
-	((addrm1)|((addrm2)<<2)|((addrm3)<<4))
-
 
 #define ENCODE_OPR(i0opr,x64opr,reg_encoded) \
 	do{\
@@ -767,10 +94,10 @@ static __inline int FindMemOperandFromCache(uint64_t addr,x64_OPR* M, MEM_CACHE_
 		}\
 	}while(0)
 
-#define IDT_BASE 0x0
 
-void TranslateINT(I0INSTR* i0instr, x64INSTR* x64instrs, uint32_t* _x64_ins_cnt)
+DECODE_STATUS TranslateINT(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
 {
+	x64INSTR x64instrs[5];
 	uint32_t instr_cnt = 0;
 	x64_OPR x64oprs_tmp[4];
 	x64oprs_tmp[0].type = x64_OPR_I;
@@ -793,15 +120,15 @@ void TranslateINT(I0INSTR* i0instr, x64INSTR* x64instrs, uint32_t* _x64_ins_cnt)
 	x64instrs[instr_cnt].ModRM_SIB[1] = 0xc2;
 	//callq *(%rdx, %rax, 8)
 	instr_cnt++;
-	(*_x64_ins_cnt)  = instr_cnt;
-	return;
+	Writex64Instrs(x64instrs, instr_cnt, nativeblock, nativelimit, is_write);
+	RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_INT, (*nativelimit));
 }
 
 //typedef struct DECODE_STATUS ;
 
 DECODE_STATUS TranslateBZNZ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
 {
-	x64INSTR x64instrs[5];
+	x64INSTR x64instrs[10];
 	uint32_t instr_cnt = 0;
 	x64_OPR x64oprs[1];
 	x64_OPR x64oprs_tmp[1];
@@ -872,7 +199,7 @@ DECODE_STATUS TranslateBZNZ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write) {
 	x64_OPR x64oprs[2];
 	x64_OPR x64oprs_tmp[3];
-	x64INSTR x64instrs[5];
+	x64INSTR x64instrs[10];
 	uint32_t instr_cnt;
 	I0OPR* i0_opr0 = (&(i0instr->opr[0]));
 	I0OPR* i0_opr1 = (&(i0instr->opr[1]));
@@ -1090,7 +417,132 @@ DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 	RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_JCC, (*nativelimit) -12);
 }
 
-void TranslateAluOp(I0INSTR* instr, uint8_t** tpc, uint8_t op) {
+DECODE_STATUS TranslateNOP(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit, int is_write)
+{
+	instr_t __instr;
+	translate2x86_64_nop((&__instr), is_write, ((char*)tpc), nativelimit, 0, 0);
+	RETURN_DECODE_STATUS(I0_TRANS_SUCCESS_NO_FURTHER_PROC,0,0);
+}
+
+DECODE_STATUS TranslateCONV(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit, int is_write)
+{
+	instr_t __instr;
+	__instr.addr = (instr->addr);
+	__instr.mattr1 = (instr->attr);
+	__instr.mattr2 = (instr->attr2);
+	__instr.addrm1 = (instr->opr[0].addrm);
+	__instr.opr1 = (instr->opr[0].val.v64);
+	__instr.disp1 = (instr->opr[0].disp32);
+	__instr.addrm2 = (instr->opr[1].addrm);
+	__instr.opr2 = (instr->opr[1].val.v64);
+	__instr.disp2 = (instr->opr[1].disp32);
+	translate2x86_64_mov((&__instr), is_write, ((char*)tpc), nativelimit, 0, 0);
+	RETURN_DECODE_STATUS(I0_TRANS_SUCCESS_NO_FURTHER_PROC,0,0);
+}
+
+DECODE_STATUS TranslateALU(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit, int is_write)
+{
+	instr_t __instr;
+	__instr.addr = (instr->addr);
+	__instr.opcode = (instr->opcode);
+	__instr.attr = (instr->attr);
+	__instr.addrm1 = (instr->opr[0].addrm);
+	__instr.opr1 = (instr->opr[0].val.v64);
+	__instr.disp1 = (instr->opr[0].disp32);
+	__instr.addrm2 = (instr->opr[1].addrm);
+	__instr.opr2 = (instr->opr[1].val.v64);
+	__instr.disp2 = (instr->opr[1].disp32);
+	__instr.addrm3 = (instr->opr[2].addrm);
+	__instr.opr3 = (instr->opr[2].val.v64);
+	__instr.disp3 = (instr->opr[2].disp32);
+	if((instr->opcode) == OP_DIV)
+	{
+		translate2x86_64_div((&__instr), is_write, ((char*)tpc), nativelimit, 0, 0);
+	}
+	else
+	{
+		translate2x86_64_alu_op((&__instr), is_write, ((char*)tpc), nativelimit, 0, 0);
+	}
+	RETURN_DECODE_STATUS(I0_TRANS_SUCCESS_NO_FURTHER_PROC,0,0);
+}
+
+/*DECODE_STATUS TranslateINT(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit, int is_write)
+{
+	instr_t __instr;
+	__instr.opr1 =((uint64_t)(instr->opr[0].val.v8));
+	translate2x86_64_int((&__instr), is_write, ((char*)tpc), nativelimit, 0, 0);
+	RETURN_DECODE_STATUS(I0_DECODE_BRANCH,I0_DECODE_INT,__instr.opr1);
+}*/
+
+DECODE_STATUS TranslateEXIT(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit, int is_write)
+{
+	instr_t __instr;
+	__instr.option = (instr->option);
+	translate2x86_64_exit((&__instr), is_write, ((char*)tpc), nativelimit, 0, 0);
+	RETURN_DECODE_STATUS(I0_DECODE_BRANCH,I0_DECODE_EXIT,__instr.option);
+}
+
+DECODE_STATUS TranslateSPAWN(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit, int is_write)
+{
+	instr_t __instr;
+	__instr.addrm1 = (instr->opr[0].addrm);
+	__instr.opr1 = (instr->opr[0].val.v64);
+	__instr.disp1 = (instr->opr[0].disp32);
+	__instr.addrm2 = (instr->opr[1].addrm);
+	__instr.opr2 = (instr->opr[1].val.v64);
+	__instr.disp2 = (instr->opr[1].disp32);
+	__instr.addrm3 = (instr->opr[2].addrm);
+	__instr.opr3 = (instr->opr[2].val.v64);
+	__instr.disp3 = (instr->opr[2].disp32);
+	__instr.addrm4 = (instr->opr[3].addrm);
+	__instr.opr4 = (instr->opr[3].val.v64);
+	__instr.disp4 = (instr->opr[3].disp32);
+	translate2x86_64_spawn((&__instr), is_write, ((char*)tpc), nativelimit, 0, 0);
+	RETURN_DECODE_STATUS(I0_TRANS_SUCCESS_NO_FURTHER_PROC,0,0);
+}
+
+DECODE_STATUS TranslateSHIFT(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit, int is_write)
+{
+	instr_t __instr;
+	__instr.option = (instr->option);
+	__instr.attr = (instr->attr);
+	__instr.addrm1 = (instr->opr[0].addrm);
+	__instr.opr1 = (instr->opr[0].val.v64);
+	__instr.disp1 = (instr->opr[0].disp32);
+	__instr.addrm2 = (instr->opr[1].addrm);
+	__instr.opr2 = (instr->opr[1].val.v64);
+	__instr.disp2 = (instr->opr[1].disp32);
+	__instr.addrm3 = (instr->opr[2].addrm);
+	__instr.opr3 = (instr->opr[2].val.v64);
+	__instr.disp3 = (instr->opr[2].disp32);
+	translate2x86_64_shift((&__instr), is_write, ((char*)tpc), nativelimit, 0, 0);
+	RETURN_DECODE_STATUS(I0_TRANS_SUCCESS_NO_FURTHER_PROC,0,0);
+}
+
+DECODE_STATUS TranslateSCMP(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit, int is_write)
+{
+	instr_t __instr;
+	__instr.addrms[0] = (instr->opr[0].addrm);
+	__instr.oprs[0] = (instr->opr[0].val.v64);
+	__instr.disps[0] = (instr->opr[0].disp32);
+	__instr.addrms[1] = (instr->opr[1].addrm);
+	__instr.oprs[1] = (instr->opr[1].val.v64);
+	__instr.disps[1] = (instr->opr[1].disp32);
+	__instr.addrms[2] = (instr->opr[2].addrm);
+	__instr.oprs[2] = (instr->opr[2].val.v64);
+	__instr.disps[2] = (instr->opr[2].disp32);
+	__instr.addrms[3] = (instr->opr[3].addrm);
+	__instr.oprs[3] = (instr->opr[3].val.v64);
+	__instr.disps[3] = (instr->opr[3].disp32);
+	__instr.addrms[4] = (instr->opr[4].addrm);
+	__instr.oprs[4] = (instr->opr[4].val.v64);
+	__instr.disps[4] = (instr->opr[4].disp32);
+	translate2x86_64_strcmp((&__instr), is_write, ((char*)tpc), nativelimit, 0, 0);
+	RETURN_DECODE_STATUS(I0_TRANS_SUCCESS_NO_FURTHER_PROC,0,0);
+}
+
+
+/*void TranslateAluOp(I0INSTR* instr, uint8_t** tpc, uint8_t op) {
 	x64_OPR x64oprs[3];
 	x64_OPR x64oprs_tmp[3];
 	x64INSTR x64instrs[10];
@@ -1469,3 +921,19 @@ void TranslateAluOp(I0INSTR* instr, uint8_t** tpc, uint8_t op) {
 	return;
 }
 
+*/
+
+
+uint64_t run_i0_code2(uint64_t __tmp__)
+{
+	(void)__tmp__;
+	uint8_t* spc  = ((uint8_t*)(I0_CODE_BEGIN));
+	uint8_t* i0_limit = ((uint8_t*)(I0_CODE_BEGIN + (_pi0codemeta->i0_code_file_len)));
+	while(((uint64_t)spc) < ((uint64_t)i0_limit))
+	{
+		uint64_t nativelimit = 0;
+		DECODE_STATUS decode_stat;
+		decode_stat = TranslateI0ToNative(&spc, native_code_cache, &nativelimit, i0_limit, 1);
+
+	}
+}

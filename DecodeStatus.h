@@ -19,4 +19,14 @@
 	#define I0_DECODE_EXIT						0x04
 	#define I0_DECODE_INT						0x05
 
+typedef struct _DECODE_STATUS{
+	unsigned long status;
+	unsigned long detail;
+	unsigned long detail2;
+}DECODE_STATUS;
+
+#define RETURN_DECODE_STATUS(status, detail, detail2) \
+	do{ DECODE_STATUS result= {(status), (detail), (detail2)}; return result;}while(0)
+
+
 #endif /* DECODESTATUS_H_ */

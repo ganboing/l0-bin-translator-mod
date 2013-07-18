@@ -33,6 +33,8 @@
 
 #include "profiling_entries.h"
 
+//#include "DecodeStatus.h"
+
 static void error(char *msg)
 {
 
@@ -8170,8 +8172,11 @@ uint64_t _sys_indirect_jump_handler(char *target)
     return native_entry;
 }
 
+uint64_t run_i0_code2(uint64_t fi);
+
 uint64_t run_i0_code(uint64_t fi)
 {
+	return run_i0_code2(fi);
 	//ModLog("this is a test!%d %d %d\n",1, 2, 3);
 	//ModLog("preparing to run i0 code @ addr: 0x%lx\n",fi);
 	//PrintPBlockMeta();
