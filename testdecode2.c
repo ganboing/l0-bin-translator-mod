@@ -9,6 +9,33 @@
 #include "x64Encode.h"
 #include "x64Encode.c"
 
+void error(char*);
+
+int translate2x86_64_alu_op(
+        instr_t *i, int is_write_n,
+        char *n, uint64_t *nl, char *t, uint64_t *tl);
+int translate2x86_64_div(
+        instr_t *i, int is_write_n,
+        char *n, uint64_t *nl, char *t, uint64_t *tl);
+int translate2x86_64_exit(
+        instr_t *i, int is_write_n,
+        char *n, uint64_t *nl, char *t, uint64_t *tl);
+int translate2x86_64_nop(
+        instr_t *i, int is_write_n,
+        char *n, uint64_t *nl, char *t, uint64_t *tl);
+int translate2x86_64_mov(
+        instr_t *i, int is_write_n,
+        char *n, uint64_t *nl, char *t, uint64_t *tl);
+int translate2x86_64_shift(
+        instr_t *i, int is_write_n,
+        char *n, uint64_t *nl, char *t, uint64_t *tl);
+int translate2x86_64_spawn(
+        instr_t *i, int is_write_n,
+        char *n, uint64_t *nl, char *t, uint64_t *tl);
+int translate2x86_64_strcmp(
+        instr_t *i, int is_write_n,
+        char *n, uint64_t *nl, char *t, uint64_t *tl);
+
 static uint8_t i0_x64_reg_map[0x08]=
 {
 	x64_BX,
