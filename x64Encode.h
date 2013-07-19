@@ -49,10 +49,10 @@
 #define REX_R_BIT 2
 #define REX_W_BIT 3
 
-#define TYPE_ID_BYTE 0
-#define TYPE_ID_DWORD 1
-#define TYPE_ID_QWORD 2
-#define TYPE_ID_OWORD 3
+#define TYPE_LEN_BYTE 1
+#define TYPE_LEN_DWORD 4
+#define TYPE_LEN_QWORD 8
+#define TYPE_LEN_OWORD 16
 
 #define ZEROOUT_x64_INSTR() \
 	do{memset((char*)(x64instrs + instr_cnt),0,sizeof(x64INSTR));}while(0)
