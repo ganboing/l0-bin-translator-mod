@@ -314,14 +314,14 @@ DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 	x64_OPR x64oprs[2];
 	x64_OPR x64oprs_tmp[3];
 	x64INSTR x64instrs[10];
-	uint32_t instr_cnt = 0;
+	uint32_t instr_cnt ;
 	I0OPR* i0_opr0 = (&(i0instr->opr[0]));
 	I0OPR* i0_opr1 = (&(i0instr->opr[1]));
 
 	uint8_t tttn;
 
 	x64_OPR* x64_opr0 = (&(x64oprs[0]));
-	x64_OPR* x64_opr1 = (&(x64oprs[2]));
+	x64_OPR* x64_opr1 = (&(x64oprs[1]));
 	x64oprs_tmp[0].type = x64_OPR_TYPE_REG;
 	x64oprs_tmp[0].reg = x64_AX;
 
