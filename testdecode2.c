@@ -9,6 +9,8 @@
 #include "asm_func.h"
 #include "DecodeI0.h"
 #include "asm_func.h"
+#include "zlog_mod.h"
+#include "PrintDisasm.h"
 #include "x64Encode.h"
 #include "x64Encode.c"
 
@@ -314,7 +316,7 @@ DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 	x64_OPR x64oprs[2];
 	x64_OPR x64oprs_tmp[3];
 	x64INSTR x64instrs[10];
-	uint32_t instr_cnt ;
+	uint32_t instr_cnt = 0;
 	I0OPR* i0_opr0 = (&(i0instr->opr[0]));
 	I0OPR* i0_opr1 = (&(i0instr->opr[1]));
 
@@ -375,8 +377,6 @@ DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 		break;
 	case OPT_B_SL:
 		error("opt_b_sl not implemented!");
-		break;
-	default:
 		break;
 	}
 
@@ -571,7 +571,7 @@ DECODE_STATUS TranslateEXIT(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit,
 	instr_t __instr;
 	__instr.option = (instr->option);
 	translate2x86_64_exit((&__instr), is_write, ((char*)tpc), nativelimit, 0, 0);
-	RETURN_DECODE_STATUS(I0_DECODE_BRANCH,I0_DECODE_EXIT,__instr.option);
+	RETURN_DECODE_STATUS(I0_DECODE_BRANCH,I0_DECODE_EXIT,(*nativelimit));
 }
 
 DECODE_STATUS TranslateSPAWN(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit, int is_write)
@@ -1017,9 +1017,12 @@ DECODE_STATUS TranslateSCMP(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit,
 
 
 
-/*uint64_t run_i0_code2(uint64_t __tmp__)
+uint64_t run_i0_code2(uint64_t __tmp__)
 {
+	static uint8_t native_code_cache[1024];
 	(void)__tmp__;
+	uint8_t* tran_out = GetDisasmOutAddr();
+	uint64_t tran_out_offset = 0;
 	uint8_t* spc  = ((uint8_t*)(I0_CODE_BEGIN));
 	uint8_t* i0_limit = ((uint8_t*)(I0_CODE_BEGIN + (_pi0codemeta->i0_code_file_len)));
 	while(((uint64_t)spc) < ((uint64_t)i0_limit))
@@ -1027,7 +1030,33 @@ DECODE_STATUS TranslateSCMP(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit,
 		uint64_t nativelimit = 0;
 		DECODE_STATUS decode_stat;
 		decode_stat = TranslateI0ToNative(&spc, native_code_cache, &nativelimit, i0_limit, 1);
-
+		switch(decode_stat.status)
+		{
+		case I0_DECODE_BRANCH:
+			memcpy(tran_out+tran_out_offset, native_code_cache, nativelimit);
+			FlushTransOutput();
+			tran_out_offset += nativelimit;
+			switch(decode_stat.detail2)
+			{
+			case I0_DECODE_INT:
+				ModLog("branch int @ %lx\n", tran_out_offset);
+				break;
+			case I0_DECODE_EXIT:
+				ModLog("branch exit @ %lx\n", tran_out_offset);
+				break;
+			case I0_DECODE_JMP:
+				ModLog("branch jmp @ %lx\n", tran_out_offset);
+				break;
+			case I0_DECODE_JCC:
+				ModLog("branch jcc @ %lx\n", tran_out_offset);
+				break;
+			case I0_DECODE_JMP_INDIR:
+				ModLog("branch jindir @ %lx\n", tran_out_offset);
+				break;
+			}
+			break;
+		}
 	}
+	while(1)
+	{}
 }
-*/

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
@@ -38,4 +39,9 @@ void InitTestTransOutput(void)
 void FinishTestTransOutput(void)
 {
 	munmap(real_map_addr, (1024ULL)*(1024ULL));
+}
+
+uint8_t* GetDisasmOutAddr(void)
+{
+	return real_map_addr;
 }
