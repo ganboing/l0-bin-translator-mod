@@ -1547,7 +1547,8 @@ uint64_t run_i0_code2(uint64_t __tmp__)
 	uint8_t* i0_limit = ((uint8_t*)(I0_CODE_BEGIN + (_pi0codemeta->i0_code_file_len)));
 	while(((uint64_t)spc) < ((uint64_t)i0_limit))
 	{
-		ModLog("translating i0 @ %lx\n", (uint64_t)spc);
+		//ModLog("translating i0 @ %lx\n", (uint64_t)spc);
+		uint64_t spc_shadow = (uint64_t)spc;
 		uint64_t nativelimit = 0;
 		DECODE_STATUS decode_stat;
 		decode_stat = TranslateI0ToNative(&spc, native_code_cache, &nativelimit, i0_limit, 1);
@@ -1560,19 +1561,19 @@ uint64_t run_i0_code2(uint64_t __tmp__)
 			switch(decode_stat.detail)
 			{
 			case I0_DECODE_INT:
-				ModLog("branch int @ %lx\n", tran_out_offset);
+				ModLog("branch int @ %lx native @ %lx\n",spc_shadow, tran_out_offset);
 				break;
 			case I0_DECODE_EXIT:
-				ModLog("branch exit @ %lx\n", tran_out_offset);
+				ModLog("branch exit @ %lx native @ %lx\n",spc_shadow,  tran_out_offset);
 				break;
 			case I0_DECODE_JMP:
-				ModLog("branch jmp @ %lx\n", tran_out_offset);
+				ModLog("branch jmp @ %lx native @ %lx\n",spc_shadow,  tran_out_offset);
 				break;
 			case I0_DECODE_JCC:
-				ModLog("branch jcc @ %lx\n", tran_out_offset);
+				ModLog("branch jcc @ %lx native @ %lx\n",spc_shadow,  tran_out_offset);
 				break;
 			case I0_DECODE_JMP_INDIR:
-				ModLog("branch jindir @ %lx\n", tran_out_offset);
+				ModLog("branch jindir @ %lx native @ %lx\n",spc_shadow,  tran_out_offset);
 				break;
 			}
 			break;
