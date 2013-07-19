@@ -375,7 +375,7 @@ DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 	case OPT_B_NE:
 		tttn = x64_TTTN_Z;
 		break;
-	case OPT_B_SL:
+	default:
 		error("opt_b_sl not implemented!");
 		break;
 	}
