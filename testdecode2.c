@@ -16,7 +16,11 @@
 
 extern void* IndirJmpHashTab;
 
-void error(char*);
+void error(char*)
+#ifndef MSVC
+	__attribute__((noreturn))
+#endif
+	;
 
 int translate2x86_64_alu_op(
         instr_t *i, int is_write_n,
