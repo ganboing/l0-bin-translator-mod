@@ -1547,6 +1547,7 @@ uint64_t run_i0_code2(uint64_t __tmp__)
 	uint8_t* i0_limit = ((uint8_t*)(I0_CODE_BEGIN + (_pi0codemeta->i0_code_file_len)));
 	while(((uint64_t)spc) < ((uint64_t)i0_limit))
 	{
+		ModLog("translating i0 @ %lx\n", (uint64_t)spc);
 		uint64_t nativelimit = 0;
 		DECODE_STATUS decode_stat;
 		decode_stat = TranslateI0ToNative(&spc, native_code_cache, &nativelimit, i0_limit, 1);
