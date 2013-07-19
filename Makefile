@@ -5,7 +5,7 @@ LDFLAGS=-static -pthread
 
 all: vpc_lnk
 
-bin-translator:
+bin-translator: zlog_mod
 	$(CC) $(CFLAGS) $(LDFLAGS) -c bin_translator.c -o vpc_objects/bin_translator.o
 	$(CC) -c asm_func.S
 	$(CC) $(CFLAGS) -c testdecode2.c
