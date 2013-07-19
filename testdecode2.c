@@ -1557,7 +1557,7 @@ uint64_t run_i0_code2(uint64_t __tmp__)
 			memcpy(tran_out+tran_out_offset, native_code_cache, nativelimit);
 			FlushTransOutput();
 			tran_out_offset += nativelimit;
-			switch(decode_stat.detail2)
+			switch(decode_stat.detail)
 			{
 			case I0_DECODE_INT:
 				ModLog("branch int @ %lx\n", tran_out_offset);
