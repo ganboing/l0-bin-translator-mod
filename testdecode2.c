@@ -288,8 +288,6 @@ DECODE_STATUS TranslateBZNZ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 			RETURN_DECODE_STATUS(I0_TRANS_SUCCESS_NO_FURTHER_PROC,0,0);
 		}
 		break;
-	case x64_OPR_TYPE_REG:
-		break;
 	case x64_OPR_TYPE_M:
 		if(!(opr_encoed_reg[0]))
 		{
@@ -377,6 +375,8 @@ DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 		break;
 	case OPT_B_SL:
 		error("opt_b_sl not implemented!");
+		break;
+	default:
 		break;
 	}
 
