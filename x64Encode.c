@@ -105,13 +105,13 @@ __inline static void x64EncodeMovMI64ToAX(x64INSTR* instr, uint64_t moffs,uint8_
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
-	case TYPE_ID_BYTE:
+	case TYPE_LEN_BYTE:
 		instr->opcode[0] = 0xa0;
 		break;
-	case TYPE_ID_DWORD:
+	case TYPE_LEN_DWORD:
 		instr->opcode[0] = 0xa1;
 		break;
-	case TYPE_ID_QWORD:
+	case TYPE_LEN_QWORD:
 		instr->opcode[0] = 0xa1;
 		instr->REX = (1<<REX_W_BIT);
 		break;
@@ -124,13 +124,13 @@ __inline static void x64EncodeMovAXToMI64(x64INSTR* instr, uint64_t moffs,uint8_
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
-	case TYPE_ID_BYTE:
+	case TYPE_LEN_BYTE:
 		instr->opcode[0] = 0xa2;
 		break;
-	case TYPE_ID_DWORD:
+	case TYPE_LEN_DWORD:
 		instr->opcode[0] = 0xa3;
 		break;
-	case TYPE_ID_QWORD:
+	case TYPE_LEN_QWORD:
 		instr->opcode[0] = 0xa3;
 		instr->REX = (1<<REX_W_BIT);
 		break;
@@ -143,13 +143,13 @@ __inline static void x64EncodeMovGE(x64INSTR* instr, x64_OPR G, x64_OPR E, uint8
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
-	case TYPE_ID_BYTE:
+	case TYPE_LEN_BYTE:
 		instr->opcode[0] = 0x8a;
 		break;
-	case TYPE_ID_DWORD:
+	case TYPE_LEN_DWORD:
 		instr->opcode[0] = 0x8b;
 		break;
-	case TYPE_ID_QWORD:
+	case TYPE_LEN_QWORD:
 		instr->opcode[0] = 0x8b;
 		instr->REX = (1<<REX_W_BIT);
 		break;
@@ -161,13 +161,13 @@ __inline static void x64EncodeMovEG(x64INSTR* instr, x64_OPR E, x64_OPR G, uint8
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
-	case TYPE_ID_BYTE:
+	case TYPE_LEN_BYTE:
 		instr->opcode[0] = 0x88;
 		break;
-	case TYPE_ID_DWORD:
+	case TYPE_LEN_DWORD:
 		instr->opcode[0] = 0x89;
 		break;
-	case TYPE_ID_QWORD:
+	case TYPE_LEN_QWORD:
 		instr->opcode[0] = 0x89;
 		instr->REX = (1<<REX_W_BIT);
 		break;
@@ -180,17 +180,17 @@ __inline static void x64EncodeMovEI(x64INSTR* instr,  x64_OPR E, x64_OPR I, uint
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
-	case TYPE_ID_BYTE:
+	case TYPE_LEN_BYTE:
 		instr->opcode[0] = 0xc6;
 		instr->imm_len = 1;
 		instr->imm.v8 = I.imm.v8;
 		break;
-	case TYPE_ID_DWORD:
+	case TYPE_LEN_DWORD:
 		instr->opcode[0] = 0xc7;
 		instr->imm_len = 4;
 		instr->imm.v32 = I.imm.v32;
 		break;
-	case TYPE_ID_QWORD:
+	case TYPE_LEN_QWORD:
 		instr->opcode[0] = 0xc7;
 		instr->REX = (1<<REX_W_BIT);
 		instr->imm_len = 4;
@@ -211,17 +211,17 @@ __inline static void x64EncodeMovGI(x64INSTR* instr, x64_OPR G, x64_OPR I,uint8_
 	}
 	switch(oprsize)
 	{
-	case TYPE_ID_BYTE:
+	case TYPE_LEN_BYTE:
 		instr->opcode[0] = (0xb0 | (G.reg) );
 		instr->imm_len = 1;
 		instr->imm.v8 = I.imm.v8;
 		break;
-	case TYPE_ID_DWORD:
+	case TYPE_LEN_DWORD:
 		instr->opcode[0] = (0xb8 | (G.reg) );
 		instr->imm_len = 4;
 		instr->imm.v32 = I.imm.v32;
 		break;
-	case TYPE_ID_QWORD:
+	case TYPE_LEN_QWORD:
 		if(WITHIN64_32BIT(I.imm.v64))
 		{
 			x64EncodeMovEI(instr,G,I,oprsize);
@@ -243,13 +243,13 @@ __inline static void x64EncodeAluGE(x64INSTR* instr, uint8_t op, x64_OPR G, x64_
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
-	case TYPE_ID_BYTE:
+	case TYPE_LEN_BYTE:
 		instr->opcode[0] = op + 2;
 		break;
-	case TYPE_ID_DWORD:
+	case TYPE_LEN_DWORD:
 		instr->opcode[0] = op + 3;
 		break;
-	case TYPE_ID_QWORD:
+	case TYPE_LEN_QWORD:
 		instr->REX = (1<<REX_W_BIT);
 		instr->opcode[0] = op + 3;
 	}
@@ -261,13 +261,13 @@ __inline static void x64EncodeAluEG(x64INSTR* instr, uint8_t op, x64_OPR E, x64_
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
-	case TYPE_ID_BYTE:
+	case TYPE_LEN_BYTE:
 		instr->opcode[0] = op;
 		break;
-	case TYPE_ID_DWORD:
+	case TYPE_LEN_DWORD:
 		instr->opcode[0] = op + 1;
 		break;
-	case TYPE_ID_QWORD:
+	case TYPE_LEN_QWORD:
 		instr->REX = (1<<REX_W_BIT);
 		instr->opcode[0] = op + 1;
 	}
@@ -279,17 +279,17 @@ __inline static void x64EncodeAluIToAX(x64INSTR* instr, uint8_t op, x64_OPR I, u
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
-	case TYPE_ID_BYTE:
+	case TYPE_LEN_BYTE:
 		instr->opcode[0] = op + 4;
 		instr->imm_len = 1;
 		instr->imm.v8 = I.imm.v8;
 		break;
-	case TYPE_ID_DWORD:
+	case TYPE_LEN_DWORD:
 		instr->opcode[0] = op + 5;
 		instr->imm_len = 4;
 		instr->imm.v32 = I.imm.v32;
 		break;
-	case TYPE_ID_QWORD:
+	case TYPE_LEN_QWORD:
 		instr->opcode[0] = op + 5;
 		instr->REX = (1<<REX_W_BIT);
 		instr->imm_len = 4;
@@ -303,12 +303,12 @@ __inline static void x64EncodeAluEI(x64INSTR* instr, uint8_t op, x64_OPR E,x64_O
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
-	case TYPE_ID_BYTE:
+	case TYPE_LEN_BYTE:
 		instr->opcode[0] = 0x80;
 		instr->imm_len = 1;
 		instr->imm.v8 = I.imm.v8;
 		break;
-	case TYPE_ID_DWORD:
+	case TYPE_LEN_DWORD:
 		if(WITHIN32_8BIT(I.imm.v32))
 		{
 			instr->opcode[0] = 0x83;
@@ -330,7 +330,7 @@ __inline static void x64EncodeAluEI(x64INSTR* instr, uint8_t op, x64_OPR E,x64_O
 			}
 		}
 		break;
-	case TYPE_ID_QWORD:
+	case TYPE_LEN_QWORD:
 		instr->REX = (1<<REX_W_BIT);
 		if(WITHIN32_8BIT(I.imm.v32))
 		{
@@ -378,13 +378,13 @@ __inline static void x64EncodeMulDivE(x64INSTR* instr, uint8_t op, x64_OPR E, ui
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
-	case TYPE_ID_BYTE:
+	case TYPE_LEN_BYTE:
 		instr->opcode[0] = 0xf6;
 		break;
-	case TYPE_ID_DWORD:
+	case TYPE_LEN_DWORD:
 		instr->opcode[0] = 0xf7;
 		break;
-	case TYPE_ID_QWORD:
+	case TYPE_LEN_QWORD:
 		instr->opcode[0] = 0xf7;
 		instr->REX = (1<<REX_W_BIT);
 		break;
@@ -399,7 +399,7 @@ __inline static void x64EncodeIMulGE(x64INSTR* instr, x64_OPR G, x64_OPR E, uint
 	instr->opcode[1] = 0xaf;
 	switch(oprsize)
 	{
-	case TYPE_ID_QWORD:
+	case TYPE_LEN_QWORD:
 		instr->REX = (1<<REX_W_BIT);
 		break;
 	}
@@ -422,7 +422,7 @@ __inline static void x64EncodeIMulGEI(x64INSTR* instr, x64_OPR G, x64_OPR E, x64
 	}
 	switch(oprsize)
 	{
-	case TYPE_ID_QWORD:
+	case TYPE_LEN_QWORD:
 		instr->REX = (1<<REX_W_BIT);
 		break;
 	}
@@ -469,7 +469,7 @@ __inline static void x64EncodeCallAbsImm64(uint8_t* nativeblock, uint64_t* nativ
 	x64oprs_tmp[1].type = x64_OPR_I;
 	x64oprs_tmp[1].imm.v64 = addr;
 	ZEROOUT_x64_INSTR();
-	x64EncodeMovGI(x64instrs+ (instr_cnt++), x64oprs_tmp[0], x64oprs_tmp[1], TYPE_ID_QWORD);
+	x64EncodeMovGI(x64instrs+ (instr_cnt++), x64oprs_tmp[0], x64oprs_tmp[1], TYPE_LEN_QWORD);
 	ZEROOUT_x64_INSTR();
 	x64EncodeCallDirE(x64instrs + (instr_cnt++), x64oprs_tmp[1]);
 	Writex64Instrs(x64instrs, instr_cnt, nativeblock, nativelimit, is_write);
@@ -513,7 +513,7 @@ __inline static void x64EncodeMovZx8To64GE(x64INSTR* instr, x64_OPR G, x64_OPR E
 }
 __inline static void x64EncodeMovZx32To64GE(x64INSTR* instr, x64_OPR G, x64_OPR E)
 {
-	x64EncodeMovGE(instr,G,E,TYPE_ID_DWORD);
+	x64EncodeMovGE(instr,G,E,TYPE_LEN_DWORD);
 }
 __inline static void x64EncodeNegE(x64INSTR* instr, x64_OPR E, uint8_t oprsize)
 {
@@ -521,13 +521,13 @@ __inline static void x64EncodeNegE(x64INSTR* instr, x64_OPR E, uint8_t oprsize)
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
-	case TYPE_ID_BYTE:
+	case TYPE_LEN_BYTE:
 		instr->opcode[0] = 0xf6;
 		break;
-	case TYPE_ID_DWORD:
+	case TYPE_LEN_DWORD:
 		instr->opcode[0] = 0xf7;
 		break;
-	case TYPE_ID_QWORD:
+	case TYPE_LEN_QWORD:
 		instr->REX = (1<<REX_W_BIT);
 		instr->opcode[0] = 0xf7;
 		break;
