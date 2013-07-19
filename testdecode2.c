@@ -77,7 +77,7 @@ static uint8_t I0OprDSize[0x10][0x08]=
 };
 
 
-extern void* IndirJmpHashTab;
+unsigned long IndirJmpHashTab[1];
 
 void error(char*)
 #ifndef MSVC
