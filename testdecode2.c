@@ -511,6 +511,7 @@ DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 
 DECODE_STATUS TranslateNOP(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit, int is_write)
 {
+	(void)instr;
 	instr_t __instr;
 	translate2x86_64_nop((&__instr), is_write, ((char*)tpc), nativelimit, 0, 0);
 	RETURN_DECODE_STATUS(I0_TRANS_SUCCESS_NO_FURTHER_PROC,0,0);
