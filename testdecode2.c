@@ -1015,7 +1015,11 @@ DECODE_STATUS TranslateSCMP(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit,
 
 */
 
+typedef struct _i0_code_meta_t {
+    uint64_t i0_code_file_len;
+} i0_code_meta_t;
 
+extern i0_code_meta_t *_pi0codemeta;
 
 uint64_t run_i0_code2(uint64_t __tmp__)
 {
