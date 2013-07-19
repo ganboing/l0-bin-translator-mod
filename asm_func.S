@@ -1,4 +1,4 @@
-;uint64_t MapSpcToTpc(uint64_t spc)
+#uint64_t MapSpcToTpc(uint64_t spc)
 .extern SpcTpcHashTable
 .extern MapSpcToTpc
 .extern JmpFromNativeBlock
