@@ -107,12 +107,13 @@ DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nat
 	//48 3b 37				cmpq (%rdi), %rsi
 	//75 05					jne .+5
 	//ff 67 08				jmpq *0x08(%rdi)
+	//eb 07					jmp .+7
 	//b8 ??x4				movl hash_tab_miss_handler, %eax
 	//ff e0					jmpq *%rax
 	static const uint8_t and_eax_opcode[1] = {0x25};
 	static const uint8_t shl_eax_3_lea_3rax_op[7] = {0xc1, 0xe0, 0x03, 0x48, 0x8d, 0xbc, 0x40};
 	static const uint8_t rest1[9] = {0x48, 0x3b, 0x37, 0x75, 0x05,
-		0xff, 0x67, 0x08, 0xeb};
+		0xff, 0x67, 0x08, 0xb8};
 	static const uint8_t jmpq_rax[2] = {0xff, 0xe0};
 	//read dest addr to %rax
 	I0OPR* i0_opr = (&(i0instr->opr[0]));
