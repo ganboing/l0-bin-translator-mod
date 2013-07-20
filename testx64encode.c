@@ -216,7 +216,7 @@ int main()
 	//Writex64Instrs(x64instrs, instr_cnt, output_addr, &nativelimit, 1);
 	
 	I0INSTR i0_instr;
-	i0_instr.opr[0].addrm == ADDRM_ABSOLUTE;
+	i0_instr.opr[0].addrm = ADDRM_ABSOLUTE;
 	i0_instr.opr[0].val.v64 = 0x200000018ULL;
 	i0_instr.opr[0].disp32 = 0;
 	TranslateBIJ(&i0_instr, output_addr, &nativelimit, 1);
