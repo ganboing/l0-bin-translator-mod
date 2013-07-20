@@ -454,7 +454,7 @@ __inline static void x64EncodeCallDirE(x64INSTR* instr, x64_OPR E)
 __inline static void x64EncodeJmpCcRel32(x64INSTR* instr, uint8_t tttn, uint32_t off32)
 {
 	instr->opcode_len = 2;
-	instr->opcode[0] = 0xf0;
+	instr->opcode[0] = 0x0f;
 	instr->opcode[1] = 0x80 | tttn;
 	instr->imm_len = 4;
 	instr->imm.v32 = off32;
