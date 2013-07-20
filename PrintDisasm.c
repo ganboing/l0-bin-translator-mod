@@ -36,7 +36,7 @@ void InitTestTransOutput(void)
 	{
 		exit(-200);
 	}
-	memset(real_map_addr, 0,  (1024ULL*1024ULL));
+	memset(real_map_addr, 0x90,  (1024ULL*1024ULL));
 }
 void FinishTestTransOutput(void)
 {
