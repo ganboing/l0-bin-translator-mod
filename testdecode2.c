@@ -250,8 +250,8 @@ DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nat
 	x64_OPR x64oprs_tmp[3];
 	x64oprs_tmp[0].type = x64_OPR_TYPE_REG;
 	x64oprs_tmp[0].reg = x64_AX;
-	x64oprs_tmp[0].type = x64_OPR_TYPE_REG;
-	x64oprs_tmp[0].reg = x64_SI;
+	x64oprs_tmp[1].type = x64_OPR_TYPE_REG;
+	x64oprs_tmp[1].reg = x64_SI;
 	uint32_t opr_encoded_reg[1] = {0};
 	ENCODE_OPR((*i0_opr), x64oprs[0], opr_encoded_reg[0]);
 	do{
@@ -1157,6 +1157,7 @@ DECODE_STATUS TranslateSCMP(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit,
 
 #define DECODE_OPR_M(opr, spc, addrm)\
 	do{\
+		(opr).disp32 = 0;\
 		switch(addrm)\
 		{\
 		case ADDRM_DISPLACEMENT:\

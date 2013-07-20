@@ -40,7 +40,8 @@ int main()
 	uint64_t nativelimit = 0;
 	x64INSTR x64instrs[10];
 	uint32_t instr_cnt = 0;
-	ZEROOUT_x64_INSTR();
+	
+	/*ZEROOUT_x64_INSTR();
 	x64EncodeJmpCcRel32(x64instrs+(instr_cnt++), x64_TTTN_BE,(uint32_t) 0x1234abcdef);
 	ZEROOUT_x64_INSTR();
 	x64EncodeJmpCcRel8(x64instrs+(instr_cnt++), x64_TTTN_Z, 127);
@@ -55,6 +56,7 @@ int main()
 	instr_cnt = 0;
 	ZEROOUT_x64_INSTR();
 	x64EncodeMovGE(x64instrs+(instr_cnt++), x64_opr2, x64_opr1, TYPE_LEN_QWORD);
+	*/
 	Writex64Instrs(x64instrs, instr_cnt, output_addr, &nativelimit, 1);
 	FlushTransOutput();
 	//run_i0_code(0);
