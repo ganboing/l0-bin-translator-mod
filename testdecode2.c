@@ -205,11 +205,8 @@ DECODE_STATUS TranslateINT(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nat
 	x64oprs_tmp[2].reg = x64_AX;
 	x64oprs_tmp[3].type = x64_OPR_TYPE_REG;
 	x64oprs_tmp[3].reg = x64_DX;
-	ZEROOUT_x64_INSTR();
 	x64EncodeMovGI(x64instrs+(instr_cnt++), x64oprs_tmp[3],x64oprs_tmp[0],TYPE_LEN_QWORD);
-	ZEROOUT_x64_INSTR();
 	x64EncodeMovGI(x64instrs+(instr_cnt++), x64oprs_tmp[2],x64oprs_tmp[1],TYPE_LEN_QWORD);
-	ZEROOUT_x64_INSTR();
 	x64instrs[instr_cnt].opcode_len = 1;
 	x64instrs[instr_cnt].opcode[0] = 0xff;
 	x64instrs[instr_cnt].ModRM_SIB_len = 2;
