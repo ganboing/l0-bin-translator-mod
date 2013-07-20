@@ -43,7 +43,7 @@ int main()
 	ZEROOUT_x64_INSTR();
 	x64EncodeJmpCcRel32(x64instrs+(instr_cnt++), x64_TTTN_BE,(uint32_t) 0x1234abcdef);
 	ZEROOUT_x64_INSTR();
-	x64EncodeJmpCcRel8(x64instrs+(instr_cnt++), x64_TTTN_Z, 255);
+	x64EncodeJmpCcRel8(x64instrs+(instr_cnt++), x64_TTTN_Z, 127);
 	Writex64Instrs(x64instrs, instr_cnt, output_addr, &nativelimit, 1);
 	x64EncodeCallAbsImm64(output_addr, &nativelimit, 0x1234abcdef1234, 1);
 	x64_OPR x64_opr1;
@@ -54,6 +54,7 @@ int main()
 	x64_opr2.reg = x64_AX;
 	instr_cnt = 0;
 	x64EncodeMovGE(x64instrs+(instr_cnt++), x64_opr2, x64_opr1, TYPE_LEN_QWORD);
+	Writex64Instrs(x64instrs, instr_cnt, output_addr, &nativelimit, 1);
 	FlushTransOutput();
 	//run_i0_code(0);
 	return 0;
