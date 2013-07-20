@@ -45,6 +45,7 @@ int main()
 	ZEROOUT_x64_INSTR();
 	x64EncodeJmpCcRel8(x64instrs+(instr_cnt++), x64_TTTN_Z, 12);
 	Writex64Instrs(x64instrs, instr_cnt, output_addr, &nativelimit, 1);
+	x64EncodeCallAbsImm64(output_addr, &nativelimit, 0x1234abcdef1234, 1);
 	FlushTransOutput();
 	//run_i0_code(0);
 	return 0;
