@@ -138,9 +138,11 @@ DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nat
 			}
 		}
 		x64EncodeMovGE(x64instrs+(instr_cnt++), x64oprs_tmp[0], x64oprs[0], TYPE_LEN_QWORD);
+		
 	}while(0);
 	x64EncodeMovEG(x64instrs+(instr_cnt++), x64oprs_tmp[1], x64oprs_tmp[0], TYPE_LEN_QWORD);
 	Writex64Instrs(x64instrs, instr_cnt, nativeblock, nativelimit, is_write);
+	printf("native limit now @ %lx\n", (*nativelimit));
 	if(is_write)
 	{
 		memcpy(nativeblock+(*nativelimit), and_eax_opcode, 1);
