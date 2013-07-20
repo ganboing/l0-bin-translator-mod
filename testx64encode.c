@@ -95,7 +95,7 @@ __inline static uint8_t MAP_TO_NATIVE_REGISTER(uint64_t i0addr)
 
 DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
 {
-	ModLog("bij: opr val.v64 == %lx addrm == %x disp = %x\n",i0instr->opr[0].val.v64, i0instr->opr[0].addrm, i0instr->opr[0].disp32);
+	//ModLog("bij: opr val.v64 == %lx addrm == %x disp = %x\n",i0instr->opr[0].val.v64, i0instr->opr[0].addrm, i0instr->opr[0].disp32);
 	//25 ?? ?? ?? ??		andl $0x(cnt_of_ijtab-1), %eax 
 	//c1 e0 03				shll $0x03, %eax
 	//48 8d bc 40 ??x4		leaq ijtab_addr(%rax, %rax, 2), %rdi
