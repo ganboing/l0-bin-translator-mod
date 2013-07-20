@@ -53,6 +53,7 @@ int main()
 	x64_opr2.type = x64_OPR_TYPE_REG;
 	x64_opr2.reg = x64_AX;
 	instr_cnt = 0;
+	ZEROOUT_x64_INSTR();
 	x64EncodeMovGE(x64instrs+(instr_cnt++), x64_opr2, x64_opr1, TYPE_LEN_QWORD);
 	Writex64Instrs(x64instrs, instr_cnt, output_addr, &nativelimit, 1);
 	FlushTransOutput();
