@@ -7,12 +7,16 @@
 #include <fcntl.h>
 #include "PrintDisasm.h"
 #include "zlog_mod.h"
+#include "x64encode.c"
 
 int main()
 {
 	struct stat file_detail;
 	static const uint64_t suggest_map_addr = 0x400000000;
 	static void* real_map_addr;
+
+	uint8_t* output_addr = GetDisasmOutAddr();
+
 	int i0_prog_file = open("/tmp/i0_prog.out", O_RDONLY);
 	if(i0_prog_file == -1)
 	{
@@ -33,5 +37,13 @@ int main()
 	{
 		exit(-300);
 	}
+	uint64_t nativelimit = 0;
+	x64INSTR x64instrs[10];
+	uint32_t instr_cnt = 0;
+	ZEROOUT_x64_INSTR();
+	x64EncodeJmpCcRel32(x64instrs+(instr_cnt++), x64_TTTN_BE, 12);
+	Writex64Instrs(x64instrs, instr_cnt, output_addr, &nativelimit, 1);
+	FlushTransOutput();
+	//run_i0_code(0);
 	return 0;
 }
