@@ -478,7 +478,7 @@ __inline static void x64EncodeCallAbsImm64(uint8_t* nativeblock, uint64_t* nativ
 	ZEROOUT_x64_INSTR();
 	x64EncodeMovGI(x64instrs+ (instr_cnt++), x64oprs_tmp[0], x64oprs_tmp[1], TYPE_LEN_QWORD);
 	ZEROOUT_x64_INSTR();
-	x64EncodeCallDirE(x64instrs + (instr_cnt++), x64oprs_tmp[1]);
+	x64EncodeCallDirE(x64instrs + (instr_cnt++), x64oprs_tmp[0]);
 	Writex64Instrs(x64instrs, instr_cnt, nativeblock, nativelimit, is_write);
 }
 __inline static void x64EncodeMovSx8To32GE(x64INSTR* instr, x64_OPR G, x64_OPR E)
