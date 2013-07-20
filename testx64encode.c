@@ -141,15 +141,15 @@ DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nat
 	{
 		memcpy(nativeblock+(*nativelimit), and_eax_opcode, 1);
 		(*nativeblock) += 1;
-		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ( IJ_TABLE_SIZE - 1);
+		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ( 0x40000 - 1);
 		(*nativeblock) += 4;
 		memcpy(nativeblock+(*nativelimit),shl_eax_3_lea_3rax_op, 7);
 		(*nativeblock) += 7;
-		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ((uint32_t) ((uint64_t)IndirJmpHashTab) );
+		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ((uint32_t) ((uint64_t)0x12345678abcdabcd) );
 		(*nativeblock) += 4;
 		memcpy(nativeblock+(*nativelimit), rest1, 11);
 		(*nativeblock) += 11;
-		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ((uint32_t) ((uint64_t)MapSpcToTpc_Thunk) );
+		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ((uint32_t) ((uint64_t)0x56781234dcbadcba) );
 		(*nativeblock) += 4;
 		memcpy(nativeblock+(*nativelimit), jmpq_rax, 2);
 		(*nativeblock) += 2;
