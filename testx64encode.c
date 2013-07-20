@@ -144,7 +144,7 @@ DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nat
 	x64EncodeMovEG(x64instrs+(instr_cnt++), x64oprs_tmp[1], x64oprs_tmp[0], TYPE_LEN_QWORD);
 	Writex64Instrs(x64instrs, instr_cnt, nativeblock, nativelimit, is_write);
 	printf("native limit now @ %lx\n", (*nativelimit));
-	if(is_write)
+	/*if(is_write)
 	{
 		memcpy(nativeblock+(*nativelimit), and_eax_opcode, 1);
 		(*nativeblock) += 1;
@@ -164,7 +164,7 @@ DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nat
 	else
 	{
 		(*nativelimit) += (5+3+4+4+3+2+5+7);
-	}
+	}*/
 	RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_JMP_INDIR, (*nativelimit));
 }
 
@@ -222,8 +222,8 @@ int main()
 	i0_instr.opr[0].addrm = ADDRM_ABSOLUTE;
 	i0_instr.opr[0].val.v64 = 0x200000018ULL;
 	i0_instr.opr[0].disp32 = 0;
-	//TranslateBIJ(&i0_instr, output_addr, &nativelimit, 1);
-	output_addr[nativelimit] = 0x50;
+	TranslateBIJ(&i0_instr, output_addr, &nativelimit, 1);
+	//output_addr[nativelimit] = 0x50;
 	FlushTransOutput();
 	//run_i0_code(0);
 	return 0;
