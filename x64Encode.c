@@ -455,9 +455,16 @@ __inline static void x64EncodeJmpCcRel32(x64INSTR* instr, uint8_t tttn, uint32_t
 {
 	instr->opcode_len = 2;
 	instr->opcode[0] = 0x0f;
-	instr->opcode[1] = 0x80 | tttn;
+	instr->opcode[1] = (0x80 | tttn);
 	instr->imm_len = 4;
 	instr->imm.v32 = off32;
+}
+__inline static void x64EncodeJmpCcRel8(x64INSTR* instr, uint8_t tttn, uint8_t off8)
+{
+	instr->opcode_len = 1;
+	instr->opcode[0] = (0x70 | tttn);
+	instr->imm_len = 1;
+	instr->imm.v8 = off8;
 }
 __inline static void x64EncodeCallAbsImm64(uint8_t* nativeblock, uint64_t* nativelimit, uint64_t addr, int is_write)
 {
