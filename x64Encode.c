@@ -446,7 +446,7 @@ __inline static void x64EncodeJmpDirE(x64INSTR* instr,x64_OPR E)
 __inline static void x64EncodeCallDirE(x64INSTR* instr, x64_OPR E)
 {
 	x64_OPR G;
-	instr->opcode_len = 11;
+	instr->opcode_len = 1;
 	instr->opcode[0] = 0xff;
 	G.reg = 2;
 	x64EncodeFillOpr(instr, G, E);
