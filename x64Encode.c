@@ -12,33 +12,30 @@ __inline static void Writex64Instrs(x64INSTR* instrs,uint32_t instr_cnt, uint8_t
 		{
 			if(is_write)
 			{
-				nativeblock[(*nativelimit)++] =( (instr->REX) | 0x40);
+				nativeblock[(*nativelimit)] =( (instr->REX) | 0x40);
 			}
-			else
-			{
-				(*nativelimit) ++;
-			}
+			(*nativelimit) ++;
 		}
 		if(is_write)
 		{
 			memcpy(nativeblock + (*nativelimit),(&(instr->opcode[0])),instr->opcode_len);
 		}
-		(*nativelimit) += instr->opcode_len;
+		(*nativelimit) += (instr->opcode_len);
 		if(is_write)
 		{
 			memcpy(nativeblock + (*nativelimit), (&(instr->ModRM_SIB[0])),instr->ModRM_SIB_len);
 		}
-		(*nativelimit) += instr->ModRM_SIB_len;
+		(*nativelimit) += (instr->ModRM_SIB_len);
 		if(is_write)
 		{
-			memcpy(nativeblock + (*nativelimit), (&(instr->disp)),instr->disp_len);
+			memcpy(nativeblock + (*nativelimit), (&(instr->disp.v8)),instr->disp_len);
 		}
-		(*nativelimit) += instr->disp_len;
+		(*nativelimit) += (instr->disp_len);
 		if(is_write)
 		{
 			memcpy(nativeblock + (*nativelimit), (&(instr->imm.v8)),instr->imm_len);
 		}
-		(*nativelimit) += instr->imm_len;
+		(*nativelimit) += (instr->imm_len);
 	}
 }
 __inline static uint8_t EncodeModRM(uint8_t mod, uint8_t rm, uint8_t reg)

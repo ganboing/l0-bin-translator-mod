@@ -222,7 +222,8 @@ int main()
 	i0_instr.opr[0].addrm = ADDRM_ABSOLUTE;
 	i0_instr.opr[0].val.v64 = 0x200000018ULL;
 	i0_instr.opr[0].disp32 = 0;
-	TranslateBIJ(&i0_instr, output_addr, &nativelimit, 1);
+	//TranslateBIJ(&i0_instr, output_addr, &nativelimit, 1);
+	output_addr[nativelimit] = 0x50;
 	FlushTransOutput();
 	//run_i0_code(0);
 	return 0;
