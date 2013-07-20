@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include "PrintDisasm.h"
 #include "zlog_mod.h"
-#include "x64encode.c"
+#include "x64Encode.c"
 
 int main()
 {
