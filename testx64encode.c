@@ -41,7 +41,7 @@ int main()
 	x64INSTR x64instrs[10];
 	uint32_t instr_cnt = 0;
 	ZEROOUT_x64_INSTR();
-	x64EncodeJmpCcRel32(x64instrs+(instr_cnt++), x64_TTTN_BE, 0x1234abcdef);
+	x64EncodeJmpCcRel32(x64instrs+(instr_cnt++), x64_TTTN_BE,(uint32_t) 0x1234abcdef);
 	ZEROOUT_x64_INSTR();
 	x64EncodeJmpCcRel8(x64instrs+(instr_cnt++), x64_TTTN_Z, 12);
 	Writex64Instrs(x64instrs, instr_cnt, output_addr, &nativelimit, 1);
