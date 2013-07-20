@@ -360,7 +360,7 @@ DECODE_STATUS TranslateBZNZ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 	ZEROOUT_x64_INSTR();
 	x64EncodeAluEI(x64instrs + (instr_cnt++), x64_ALU_OP_ID_CMP, x64oprs[0], x64oprs_tmp[0], I0OprISize[i0instr->attr]);
 	ZEROOUT_x64_INSTR();
-	x64EncodeJmpCcRel32(x64instrs + (instr_cnt++), tttn, 12);
+	x64EncodeJmpCcRel8(x64instrs + (instr_cnt++), tttn, 12);
 	Writex64Instrs(x64instrs,instr_cnt, nativeblock, nativelimit, is_write);
 	x64EncodeCallAbsImm64(nativeblock, nativelimit, (i0instr->opr[2].val.v64), is_write);
 	RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_JCC, (*nativelimit) - 12);
@@ -561,7 +561,7 @@ DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 	ZEROOUT_x64_INSTR();
 	x64EncodeAlu(x64instrs+(instr_cnt++), x64_ALU_OP_ID_CMP, (*x64_opr0), (*x64_opr1), I0OprISize[i0instr->attr]);
 	ZEROOUT_x64_INSTR();
-	x64EncodeJmpCcRel32(x64instrs+(instr_cnt++), tttn, 12);
+	x64EncodeJmpCcRel8(x64instrs+(instr_cnt++), tttn, 12);
 	Writex64Instrs(x64instrs, instr_cnt, nativeblock, nativelimit, is_write);
 	x64EncodeCallAbsImm64(nativeblock, nativelimit, i0instr->opr[2].val.v64, is_write);
 	RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_JCC, (*nativelimit) -12);
