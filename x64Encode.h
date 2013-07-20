@@ -54,8 +54,8 @@
 #define TYPE_LEN_QWORD 8
 #define TYPE_LEN_OWORD 16
 
-#define ZEROOUT_x64_INSTR() \
-	do{memset((char*)(x64instrs + instr_cnt),0,sizeof(x64INSTR));}while(0)
+#define ZEROOUT_x64_INSTR(instr) \
+	do{memset((char*)(instr),0,sizeof(x64INSTR));}while(0)
 
 #define WITHIN64_8BIT(val) \
 	(((int64_t)val) == ((int64_t)((int8_t)((uint8_t)((uint64_t)(val))))))

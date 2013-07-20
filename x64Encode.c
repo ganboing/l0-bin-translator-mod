@@ -102,6 +102,7 @@ __inline static void x64EncodeFillOpr(x64INSTR* instr, x64_OPR G, x64_OPR E)
 }
 __inline static void x64EncodeMovMI64ToAX(x64INSTR* instr, uint64_t moffs,uint8_t oprsize)
 {
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
@@ -120,7 +121,8 @@ __inline static void x64EncodeMovMI64ToAX(x64INSTR* instr, uint64_t moffs,uint8_
 	instr->imm_len = 8;
 }
 __inline static void x64EncodeMovAXToMI64(x64INSTR* instr, uint64_t moffs,uint8_t oprsize)
-{
+{	
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
@@ -140,6 +142,7 @@ __inline static void x64EncodeMovAXToMI64(x64INSTR* instr, uint64_t moffs,uint8_
 }
 __inline static void x64EncodeMovGE(x64INSTR* instr, x64_OPR G, x64_OPR E, uint8_t oprsize)
 {
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
@@ -158,6 +161,7 @@ __inline static void x64EncodeMovGE(x64INSTR* instr, x64_OPR G, x64_OPR E, uint8
 }
 __inline static void x64EncodeMovEG(x64INSTR* instr, x64_OPR E, x64_OPR G, uint8_t oprsize)
 {
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 1;
 	switch(oprsize)
 	{
@@ -176,6 +180,7 @@ __inline static void x64EncodeMovEG(x64INSTR* instr, x64_OPR E, x64_OPR G, uint8
 }
 __inline static void x64EncodeMovEI(x64INSTR* instr,  x64_OPR E, x64_OPR I, uint8_t oprsize)
 {
+	ZEROOUT_x64_INSTR(instr);
 	x64_OPR G;
 	instr->opcode_len = 1;
 	switch(oprsize)
@@ -203,6 +208,7 @@ __inline static void x64EncodeMovEI(x64INSTR* instr,  x64_OPR E, x64_OPR I, uint
 }
 __inline static void x64EncodeMovGI(x64INSTR* instr, x64_OPR G, x64_OPR I,uint8_t oprsize)
 {
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 1;
 	if((G.reg)>=0x08)
 	{
@@ -239,6 +245,7 @@ __inline static void x64EncodeMovGI(x64INSTR* instr, x64_OPR G, x64_OPR I,uint8_
 }
 __inline static void x64EncodeAluGE(x64INSTR* instr, uint8_t op, x64_OPR G, x64_OPR E, uint8_t oprsize)
 {
+	ZEROOUT_x64_INSTR(instr);
 	op <<= 3;
 	instr->opcode_len = 1;
 	switch(oprsize)
@@ -257,6 +264,7 @@ __inline static void x64EncodeAluGE(x64INSTR* instr, uint8_t op, x64_OPR G, x64_
 }
 __inline static void x64EncodeAluEG(x64INSTR* instr, uint8_t op, x64_OPR E, x64_OPR G, uint8_t oprsize)
 {
+	ZEROOUT_x64_INSTR(instr);
 	op <<= 3;
 	instr->opcode_len = 1;
 	switch(oprsize)
@@ -275,6 +283,7 @@ __inline static void x64EncodeAluEG(x64INSTR* instr, uint8_t op, x64_OPR E, x64_
 }
 __inline static void x64EncodeAluIToAX(x64INSTR* instr, uint8_t op, x64_OPR I, uint8_t oprsize)
 {
+	ZEROOUT_x64_INSTR(instr);
 	op <<= 3;
 	instr->opcode_len = 1;
 	switch(oprsize)
@@ -299,6 +308,7 @@ __inline static void x64EncodeAluIToAX(x64INSTR* instr, uint8_t op, x64_OPR I, u
 }
 __inline static void x64EncodeAluEI(x64INSTR* instr, uint8_t op, x64_OPR E,x64_OPR I, uint8_t oprsize)
 {
+	ZEROOUT_x64_INSTR(instr);
 	x64_OPR G;
 	instr->opcode_len = 1;
 	switch(oprsize)
@@ -359,6 +369,7 @@ __inline static void x64EncodeAluEI(x64INSTR* instr, uint8_t op, x64_OPR E,x64_O
 }
 __inline static void x64EncodeAlu(x64INSTR* instr, uint8_t op, x64_OPR dest, x64_OPR src, uint8_t oprsize)
 {
+	ZEROOUT_x64_INSTR(instr);
 	switch(src.type)
 	{
 	case x64_OPR_I:
@@ -374,6 +385,7 @@ __inline static void x64EncodeAlu(x64INSTR* instr, uint8_t op, x64_OPR dest, x64
 }
 __inline static void x64EncodeMulDivE(x64INSTR* instr, uint8_t op, x64_OPR E, uint8_t oprsize)
 {
+	ZEROOUT_x64_INSTR(instr);
 	x64_OPR G;
 	instr->opcode_len = 1;
 	switch(oprsize)
@@ -394,6 +406,7 @@ __inline static void x64EncodeMulDivE(x64INSTR* instr, uint8_t op, x64_OPR E, ui
 }
 __inline static void x64EncodeIMulGE(x64INSTR* instr, x64_OPR G, x64_OPR E, uint8_t oprsize)
 {
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 2;
 	instr->opcode[0] = 0x0f;
 	instr->opcode[1] = 0xaf;
@@ -407,6 +420,7 @@ __inline static void x64EncodeIMulGE(x64INSTR* instr, x64_OPR G, x64_OPR E, uint
 }
 __inline static void x64EncodeIMulGEI(x64INSTR* instr, x64_OPR G, x64_OPR E, x64_OPR I, uint8_t oprsize)
 {
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 1;
 	if(WITHIN32_8BIT(I.imm.v32))
 	{
@@ -430,6 +444,7 @@ __inline static void x64EncodeIMulGEI(x64INSTR* instr, x64_OPR G, x64_OPR E, x64
 }
 __inline static void x64EncodeJmpRel32(x64INSTR* instr, uint32_t off32)
 {
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 1;
 	instr->opcode[0] = 0xe9;
 	instr->imm_len = 4;
@@ -437,6 +452,7 @@ __inline static void x64EncodeJmpRel32(x64INSTR* instr, uint32_t off32)
 }
 __inline static void x64EncodeJmpDirE(x64INSTR* instr,x64_OPR E)
 {
+	ZEROOUT_x64_INSTR(instr);
 	x64_OPR G;
 	instr->opcode_len = 1;
 	instr->opcode[0] = 0xff;
@@ -445,6 +461,7 @@ __inline static void x64EncodeJmpDirE(x64INSTR* instr,x64_OPR E)
 }
 __inline static void x64EncodeCallDirE(x64INSTR* instr, x64_OPR E)
 {
+	ZEROOUT_x64_INSTR(instr);
 	x64_OPR G;
 	instr->opcode_len = 1;
 	instr->opcode[0] = 0xff;
@@ -453,6 +470,7 @@ __inline static void x64EncodeCallDirE(x64INSTR* instr, x64_OPR E)
 }
 __inline static void x64EncodeJmpCcRel32(x64INSTR* instr, uint8_t tttn, uint32_t off32)
 {
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 2;
 	instr->opcode[0] = 0x0f;
 	instr->opcode[1] = (0x80 | tttn);
@@ -461,6 +479,7 @@ __inline static void x64EncodeJmpCcRel32(x64INSTR* instr, uint8_t tttn, uint32_t
 }
 __inline static void x64EncodeJmpCcRel8(x64INSTR* instr, uint8_t tttn, uint8_t off8)
 {
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 1;
 	instr->opcode[0] = (0x70 | tttn);
 	instr->imm_len = 1;
@@ -475,14 +494,13 @@ __inline static void x64EncodeCallAbsImm64(uint8_t* nativeblock, uint64_t* nativ
 	x64oprs_tmp[0].reg = x64_AX;
 	x64oprs_tmp[1].type = x64_OPR_I;
 	x64oprs_tmp[1].imm.v64 = addr;
-	ZEROOUT_x64_INSTR();
 	x64EncodeMovGI(x64instrs+ (instr_cnt++), x64oprs_tmp[0], x64oprs_tmp[1], TYPE_LEN_QWORD);
-	ZEROOUT_x64_INSTR();
 	x64EncodeCallDirE(x64instrs + (instr_cnt++), x64oprs_tmp[0]);
 	Writex64Instrs(x64instrs, instr_cnt, nativeblock, nativelimit, is_write);
 }
 __inline static void x64EncodeMovSx8To32GE(x64INSTR* instr, x64_OPR G, x64_OPR E)
 {
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 2;
 	instr->opcode[0] = 0x0f;
 	instr->opcode[1] = 0xbe;
@@ -490,6 +508,7 @@ __inline static void x64EncodeMovSx8To32GE(x64INSTR* instr, x64_OPR G, x64_OPR E
 }
 __inline static void x64EncodeMovSx8To64GE(x64INSTR* instr, x64_OPR G, x64_OPR E)
 {
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 2;
 	instr->REX = (1<<REX_W_BIT);
 	instr->opcode[0] = 0x0f;
@@ -498,6 +517,7 @@ __inline static void x64EncodeMovSx8To64GE(x64INSTR* instr, x64_OPR G, x64_OPR E
 }
 __inline static void x64EncodeMovSx32To64GE(x64INSTR* instr, x64_OPR G, x64_OPR E)
 {
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 1;
 	instr->REX = (1<<REX_W_BIT);
 	instr->opcode[0] = 0x63;
@@ -505,6 +525,7 @@ __inline static void x64EncodeMovSx32To64GE(x64INSTR* instr, x64_OPR G, x64_OPR 
 }
 __inline static void x64EncodeMovZx8To32GE(x64INSTR* instr, x64_OPR G, x64_OPR E)
 {
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 2;
 	instr->opcode[0] = 0x0f;
 	instr->opcode[1] = 0xb6;
@@ -512,6 +533,7 @@ __inline static void x64EncodeMovZx8To32GE(x64INSTR* instr, x64_OPR G, x64_OPR E
 }
 __inline static void x64EncodeMovZx8To64GE(x64INSTR* instr, x64_OPR G, x64_OPR E)
 {
+	ZEROOUT_x64_INSTR(instr);
 	instr->opcode_len = 2;
 	instr->REX = (1<<REX_W_BIT);
 	instr->opcode[0] = 0x0f;
@@ -524,6 +546,7 @@ __inline static void x64EncodeMovZx32To64GE(x64INSTR* instr, x64_OPR G, x64_OPR 
 }
 __inline static void x64EncodeNegE(x64INSTR* instr, x64_OPR E, uint8_t oprsize)
 {
+	ZEROOUT_x64_INSTR(instr);
 	x64_OPR G;
 	instr->opcode_len = 1;
 	switch(oprsize)
