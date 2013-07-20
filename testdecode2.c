@@ -1557,7 +1557,6 @@ uint64_t run_i0_code2(uint64_t __tmp__)
 		case I0_DECODE_BRANCH:
 			memcpy(tran_out+tran_out_offset, native_code_cache, nativelimit);
 			FlushTransOutput();
-			tran_out_offset += nativelimit;
 			switch(decode_stat.detail)
 			{
 			case I0_DECODE_INT:
@@ -1575,7 +1574,12 @@ uint64_t run_i0_code2(uint64_t __tmp__)
 			case I0_DECODE_JMP_INDIR:
 				ModLog("branch jindir @ %lx native @ %lx\n",spc_shadow,  tran_out_offset);
 				break;
+			default:
+				ModLog("unexpected!\n");
+				break;
+			
 			}
+			tran_out_offset += nativelimit;
 			break;
 		}
 	}
