@@ -124,7 +124,7 @@ static uint8_t i0_x64_reg_map[0x08]=
 
 __inline static int IS_I0_REGISTER_FILE(uint64_t i0addr)
 {
-	if(i0addr>(REG_FILE_BEGIN))
+	if(i0addr>=(REG_FILE_BEGIN))
 	{
 		if(((i0addr-REG_FILE_BEGIN)/(8ULL))<(8ULL))
 		{
