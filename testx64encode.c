@@ -15,7 +15,7 @@
 
 #define ENCODE_OPR(i0opr,x64opr,reg_encoded) \
 	do{\
-		printf("opr: addrm== %x val== %lx disp32==%x", (i0opr).addrm, (i0opr).val.v64, (i0opr).disp32);\
+		printf("opr: addrm== %x val== %lx disp32==%x\n", (i0opr).addrm, (i0opr).val.v64, (i0opr).disp32);\
 		switch((i0opr).addrm)\
 		{\
 		case ADDRM_IMMEDIATE:\
