@@ -232,15 +232,14 @@ DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nat
 	//c1 e0 03				shll $0x03, %eax
 	//48 8d bc 40 ??x4		leaq ijtab_addr(%rax, %rax, 2), %rdi
 	//48 3b 37				cmpq (%rdi), %rsi
-	//75 05					jne .+5
+	//75 05					jne .+3
 	//ff 67 08				jmpq *0x08(%rdi)
-	//eb 07					jmp .+7
 	//b8 ??x4				movl hash_tab_miss_handler, %eax
 	//ff e0					jmpq *%rax
 	static const uint8_t and_eax_opcode[1] = {0x25};
 	static const uint8_t shl_eax_3_lea_3rax_op[7] = {0xc1, 0xe0, 0x03, 0x48, 0x8d, 0xbc, 0x40};
-	static const uint8_t rest1[11] = {0x48, 0x3b, 0x37, 0x75, 0x05, 
-		0xff, 0x67, 0x08, 0xeb, 0x07, 0xb8};
+	static const uint8_t rest1[9] = {0x48, 0x3b, 0x37, 0x75, 0x03,
+		0xff, 0x67, 0x08, 0xb8};
 	static const uint8_t jmpq_rax[2] = {0xff, 0xe0};
 	//read dest addr to %rax
 	I0OPR* i0_opr = (&(i0instr->opr[0]));
@@ -272,23 +271,23 @@ DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nat
 	if(is_write)
 	{
 		memcpy(nativeblock+(*nativelimit), and_eax_opcode, 1);
-		(*nativeblock) += 1;
-		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ( IJ_TABLE_SIZE - 1);
-		(*nativeblock) += 4;
+		(*nativelimit) += 1;
+		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ( 0x40000 - 1);
+		(*nativelimit) += 4;
 		memcpy(nativeblock+(*nativelimit),shl_eax_3_lea_3rax_op, 7);
-		(*nativeblock) += 7;
-		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ((uint32_t) ((uint64_t)IndirJmpHashTab) );
-		(*nativeblock) += 4;
-		memcpy(nativeblock+(*nativelimit), rest1, 11);
-		(*nativeblock) += 11;
-		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ((uint32_t) ((uint64_t)MapSpcToTpc_Thunk) );
-		(*nativeblock) += 4;
+		(*nativelimit) += 7;
+		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ((uint32_t) ((uint64_t)0x12345678abcdabcd) );
+		(*nativelimit) += 4;
+		memcpy(nativeblock+(*nativelimit), rest1, 9);
+		(*nativelimit) += 9;
+		(*((uint32_t*)(nativeblock+(*nativelimit)))) = ((uint32_t) ((uint64_t)0x56781234dcbadcba) );
+		(*nativelimit) += 4;
 		memcpy(nativeblock+(*nativelimit), jmpq_rax, 2);
-		(*nativeblock) += 2;
+		(*nativelimit) += 2;
 	}
 	else
 	{
-		(*nativelimit) += (5+3+4+4+3+2+5+7);
+		(*nativelimit) += (5+3+4+4+3+5+7);
 	}
 	RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_JMP_INDIR, (*nativelimit));
 }
