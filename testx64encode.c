@@ -24,6 +24,7 @@
 		case ADDRM_ABSOLUTE:\
 			if(IS_I0_REGISTER_FILE((i0opr).val.v64))\
 			{\
+				printf("opr is in reg file\n");\
 				(x64opr).reg=MAP_TO_NATIVE_REGISTER((i0opr).val.v64);\
 				(x64opr).type = x64_OPR_TYPE_REG;\
 				(reg_encoded) = 1;\
@@ -39,6 +40,7 @@
 			(x64opr).type = x64_OPR_TYPE_M;\
 			if(IS_I0_REGISTER_FILE((i0opr).val.v64))\
 			{\
+				printf("opr is in reg file\n");\
 				(x64opr).reg=MAP_TO_NATIVE_REGISTER((i0opr).val.v64);\
 				(reg_encoded) = 1;\
 			}\
