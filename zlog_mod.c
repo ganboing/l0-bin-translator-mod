@@ -17,7 +17,7 @@ void ModLog(const char* fmt, ...)
 
 void InitModLog(void)
 {
-	debug_log=fopen("//lhome//bgan//l0log//bintran_debug.log","w+");
+	debug_log=fopen("//lhome//bgan//l0log//bintran_debug.log","w");
 }
 
 void FinalModLog(void)
