@@ -27,10 +27,11 @@ int main()
 	real_map_addr = mmap((void*)suggest_map_addr, filesize, PROT_READ, MAP_SHARED, i0_prog_file, 0);
 	if(real_map_addr != ((void*)-1))
 	{
-		printf("map success @ %lx\n", real_map_addr);
+		printf("map success @ %lx\n", (uint64_t)real_map_addr);
 	}
 	else
 	{
 		exit(-300);
 	}
+	return 0;
 }
