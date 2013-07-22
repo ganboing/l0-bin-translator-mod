@@ -5,6 +5,7 @@
 #include <string.h>
 #include <limits.h>
 #include <assert.h>
+#include <malloc.h>
 #include <sys/mman.h>
 #include "ASM_MACROS.h"
 #include "rbtree.h"
@@ -99,9 +100,13 @@ do{\
 void* malloc_executable(size_t size)
 {
 	static unsigned long pagesize = sysconf(_SC_PAGE_SIZE);
-	uint64_t addr;
+	unsigned long addr;
 	void* ptr = malloc(size);
-	addr = ((uint64_t)ptr);
+	if(!ptr)
+	{
+		exit(CRITICAL_MEM_LOW);
+	}
+	addr = ((unsigned long)ptr);
 	mprotect((addr & (~(pagesize - 1))), ((uint64_t)(size)) + (addr & (pagesize - 1)), PROT_READ | PROT_WRITE | PROT_EXEC);
 	return ptr;
 }
@@ -144,7 +149,8 @@ void InsertTempRelocList(uint64_t i0_addr, uint64_t native_addr)
 		{
 			parent = (*insert_pos);
 			TempRelocEntry* ent = container_of(parent, TempRelocEntry,tree_node);
-			if((ent->i0_addr) > i0_addr)
+			if(((ent->i0_addr) > i0_addr) ||
+					(((ent->i0_addr) == i0_addr) && ((ent->native_addr) >native_addr)))
 			{
 				insert_pos = (&(parent->rb_left));
 				if(!(*insert_pos))
@@ -232,6 +238,32 @@ void DeleteFromRefSet(NativeCodeBlockDesc* ref_to_be_deleted, NativeCodeBlockDes
 		}
 	}
 	assert(0); //ref_to_be_deleted not found in ref set of the block
+}
+
+void AddToRefSet(NativeCodeBlockDesc* ref_to_be_added, NativeCodeBlockDesc* block)
+{
+	struct rb_node** insert_pos = (&(block->RefedBlocks.tree_root.rb_node));
+	struct rb_node* parent = NULL;
+	while(parent = (*insert_pos))
+	{
+		NativeCodeBlockDesc* parent_block = container_of(parent, NativeCodeRefNode, treenode);
+		if((parent_block->SourceCodeBase) == (ref_to_be_added->SourceCodeBase))
+		{
+			return;
+		}
+		if((parent_block->SourceCodeBase) < (ref_to_be_added->SourceCodeBase))
+		{
+			insert_pos = (&(parent->rb_right));
+		}
+		else
+		{
+			insert_pos = (&(parent->rb_left));
+		}
+	}
+	NativeCodeRefNode* new_ref_node = (NativeCodeRefNode*)malloc(sizeof(NativeCodeRefNode));
+	new_ref_node->block_ptr = ref_to_be_added;
+	rb_link_node((&(new_ref_node->treenode)), parent, insert_pos);
+	rb_insert_color((&new_ref_node->treenode), (&(block->RefedBlocks.tree_root)));
 }
 
 void ResolveExternalDeleting(NativeCodeBlockDesc* block, NativeCodeBlockDesc* block_to_be_delete)
@@ -513,15 +545,23 @@ void DeleteNativeCodeBlock(NativeCodeBlockDesc* block)
 	free(block);
 }
 
+void MergeBlocks(NativeCodeBlockDesc* first, NativeCodeBlockDesc* second)
+{
+	assert(((first->SourceCodeBase) + (first->SourceCodeSize)) == (second->SourceCodeBase));
+
+}
+
 uint64_t Translate(uint64_t spc, NativeCodeBlockDesc* from_block, NativeCodeRelocPoint* reloc_point)
 {
 	NativeCodeBlockDesc* preblock = FindTargetBlock(spc);
-	NativeCodeBlockDesc* nxtblock ;
+	NativeCodeBlockDesc* nxtblock = NULL;
 	if(preblock)
 	{
+		nxtblock = preblock->NxtBlock;
 		if(spc<((preblock->SourceCodeBase) + (preblock->SourceCodeSize)))
-		//jmp to a existing code block
+		//jmp to an existing code block
 		{
+			assert(from_block != preblock);
 			uint32_t i0_offset = (spc - (preblock->SourceCodeBase));
 			NativeCodePartitionList part_list = preblock->Part;
 			NativeCodePartitionEntry part_ent = FindNCPartitionBySpc(part_list, i0_offset);
@@ -533,31 +573,23 @@ uint64_t Translate(uint64_t spc, NativeCodeBlockDesc* from_block, NativeCodeRelo
 			}
 			if(i0_addr != spc)
 			{
-
+				NativeCodeBlockDesc* pre_new = preblock->PreBlock;
+				DeleteNativeCodeBlock(preblock);
+				preblock = pre_new;
 				//!!! preblock translated some tricky code or data, kill the preblock
 			}
 			else
 			{
-				if(preblock == from_block)
+				if(from_block)
 				{
-					error("jump to self native code block, buggy code\n");
+					assert(reloc_point);
+					(reloc_point->jmp_call_op) = jmp_rax_op;
+					(reloc_point->target) = native_addr;
+					AddToRefSet(from_block, preblock);
 				}
-				else
-				{
-					if((reloc_point->jmp_call_op) != call_rax_op)
-					{
-						error("relocation point invalid!");
-					}
-					else
-					{
-						(reloc_point->jmp_call_op) = jmp_rax_op;
-						(reloc_point->target) = native_addr;
-						return ((uint64_t)native_addr);
-					}
-				}
+				return native_addr;
 			}
 		}
-		nxtblock = preblock->NxtBlock;
 	}
 	else
 	{

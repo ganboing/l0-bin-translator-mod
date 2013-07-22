@@ -15,6 +15,25 @@
 #include "x64Encode.h"
 #include "x64Encode.c"
 
+static uint8_t SwapOprTTTN[16]=
+{
+	0xff,			//x64_TTTN_O currently do not care
+	0xff,			//x64_TTTN_NO currently do not care
+	x64_TTTN_NBE,	//x64_TTTN_B
+	x64_TTTN_BE,	//x64_TTTN_NB
+	x64_TTTN_Z,		//x64_TTTN_Z
+	x64_TTTN_NZ,	//x64_TTTN_NZ
+	x64_TTTN_NB,	//x64_TTTN_BE
+	x64_TTTN_B,		//x64_TTTN_NBE
+	0xff,			//x64_TTTN_S currently do not care
+	0xff,			//x64_TTTN_NS currently do not care
+	0xff,			//x64_TTTN_P currently do not care
+	0xff,			//x64_TTTN_NP currently do not care
+	x64_TTTN_NLE,	//x64_TTTN_L
+	x64_TTTN_LE,	//x64_TTTN_NL
+	x64_TTTN_NL,	//x64_TTTN_LE
+	x64_TTTN_L		//x64_TTTN_NLE
+};
 
 //I0OprISize[attr]
 static uint8_t I0OprISize[0x10]=
@@ -432,9 +451,7 @@ DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 		x64_opr1 = (&(x64oprs[0]));
 		opr0_encoded_reg = (&(opr_encoded_reg[1]));
 		opr1_encoded_reg = (&(opr_encoded_reg[0]));
-		if ((tttn != x64_TTTN_Z) && (tttn != x64_TTTN_NZ)) {
-			tttn ^= 1;
-		}
+		tttn = SwapOprTTTN[tttn];
 	}
 	if ((x64_opr0->type) == x64_OPR_I) {
 		switch (i0instr->attr) {

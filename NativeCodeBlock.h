@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include "rbtree.h"
 
+#define TEST_STRUCT_SIZE(TYPE, SIZE)\
+	static const char __TestTheStructSizeUsingArraySize1##TYPE[SIZE - (long)sizeof(TYPE)];\
+	static const char __TestTheStructSizeUsingArraySize2##TYPE[(long)sizeof(TYPE) - size];\
+
 typedef struct _STPC_HASH_TABLE_ENTRY STPC_HASH_TABLE_ENTRY;
 
 struct _STPC_HASH_TABLE_ENTRY
@@ -104,30 +108,51 @@ typedef struct _NativeCodePartitionList
 	uint32_t AllocSize;
 }NativeCodePartitionList;
 
+#define NC_BLOCK_CR_TAIL_JMP	0x01
+
 struct _NativeCodeBlockDesc {
 	struct rb_node DescRbNode;
 	NativeCodeBlockDesc* PreBlock;
 	NativeCodeBlockDesc* NxtBlock;
 	void* NativeCode; //XXX:should be managed manually
+	uint64_t SourceCodeBase;
 	NativeCodeRefSet RefedBlocks;
 	IJTabRefList RefedIJTab;
 	uint32_t NativeCodeSize;
 	uint32_t SourceCodeSize;
-	uint64_t SourceCodeBase;
 	NativeCodeRelocList Relocs;
 	NativeCodePartitionList Part;
+	uint64_t CR_FLAGS;
 };
 
-typedef struct _NativeCodeRelocPoint
+typedef struct _NativeCodeRelocPointJMP
 #ifndef MSVC
-	__attribute__((packed))
+	__attribute__((aligned(1),packed))
 #endif
 {
 	uint16_t mov_op;
 	uint64_t target;
 	uint16_t jmp_call_op;
-}NativeCodeRelocPoint;
+}NativeCodeRelocPointJMP;
 
+typedef struct _NativeaCodeRelocPointJCC
+#ifndef MSVC
+	__attribute__((aligned(1), packed))
+#endif
+{
+	uint8_t jcc_op_tttn;
+	uint8_t off8;
+	NativeCodeRelocPointJMP jmp_point;
+}NativeCodeRelocPointJCC;
+
+typedef union _NativeaCodeRelocPos
+#ifndef MSVC
+	__attribute__((aligned(1), packed))
+#endif
+{
+	NativeCodeRelocPointJMP jmp;
+	NativeCodeRelocPointJCC jcc;
+}NativeCodeRelocPos;
 
 typedef struct _TempRelocEntry{
 	struct rb_node tree_node;
