@@ -6,8 +6,8 @@
 
 #define TEST_STRUCT_SIZE(TYPE, SIZE)\
 	struct __TestTheStructSizeUsingZeroLengthArray_Struct_##TYPE { \
-	char TYPE##SizeSmallerThanExpected[(SIZE) - (long)sizeof(TYPE)];\
-	char TYPE##SizeLargerThanExpected[(long)sizeof(TYPE) - (SIZE)];\
+	char TYPE##SizeLargerThanExpected[(SIZE) - (long)sizeof(TYPE)];\
+	char TYPE##SizeSmallerThanExpected[(long)sizeof(TYPE) - (SIZE)];\
 };
 
 typedef struct _STPC_HASH_TABLE_ENTRY STPC_HASH_TABLE_ENTRY;
