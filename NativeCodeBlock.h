@@ -5,8 +5,10 @@
 #include "rbtree.h"
 
 #define TEST_STRUCT_SIZE(TYPE, SIZE)\
-	static const char __TestTheStructSizeUsingArraySize1##TYPE[SIZE - (long)sizeof(TYPE)];\
-	static const char __TestTheStructSizeUsingArraySize2##TYPE[(long)sizeof(TYPE) - size];\
+	struct __TestTheStructSizeUsingZeroLengthArray_Struct_##TYPE { \
+	char TYPE##SizeSmallerThanExpected[(SIZE) - (long)sizeof(TYPE)];\
+	char TYPE##SizeLargerThanExpected[(long)sizeof(TYPE) - (SIZE)];\
+};
 
 typedef struct _STPC_HASH_TABLE_ENTRY STPC_HASH_TABLE_ENTRY;
 
@@ -16,6 +18,8 @@ struct _STPC_HASH_TABLE_ENTRY
 	uint64_t tpc;
 	STPC_HASH_TABLE_ENTRY* pnlnk[1];
 };
+
+TEST_STRUCT_SIZE(STPC_HASH_TABLE_ENTRY, 3*8);
 
 union _NativeCodeRelocEntry;
 typedef union _NativeCodeRelocEntry NativeCodeRelocEntry;
@@ -29,13 +33,7 @@ typedef struct _NativeCodeBlockDesc NativeCodeBlockDesc;
 struct _NCBAvlNode;
 typedef struct _NCBAvlNode NCBAvlNode;
 
-struct _NativeCodeRelocRealEntry;
-typedef struct _NativeCodeRelocRealEntry NativeCodeRelocRealEntry;
-
-struct _NativeCodeRelocHeader;
-typedef struct _NativeCodeRelocHeader NativeCodeRelocHeader;
-
-struct 
+typedef struct 
 #ifndef MSVC 
 __attribute__ ((aligned(4),packed))  
 #endif
@@ -46,9 +44,11 @@ _NativeCodeRelocRealEntry {
 	uint64_t i0_addr;
 	uint8_t jmp_op; // 0xe9 jmp rel32
 	uint32_t rel32;
-};
+}NativeCodeRelocRealEntry;
 
-struct
+TEST_STRUCT_SIZE(NativeCodeRelocRealEntry, 20);
+
+typedef struct
 #ifndef MSVC
 __attribute__ ((aligned(4),packed))  
 #endif
@@ -59,7 +59,9 @@ _NativeCodeRelocHeader{
 	uint32_t func_ptr;
 	uint16_t call_rax_op; //0xff 0xd0
 	uint8_t padding[3];
-};
+}NativeCodeRelocHeader;
+
+TEST_STRUCT_SIZE(NativeCodeRelocHeader, 20);
 
 union
 #ifndef MSVC 
@@ -125,15 +127,18 @@ struct _NativeCodeBlockDesc {
 	uint64_t CR_FLAGS;
 };
 
-typedef struct _NativeCodeRelocPointJMP
+typedef struct
 #ifndef MSVC
 	__attribute__((aligned(1),packed))
 #endif
+	_NativeCodeRelocPointJMP
 {
 	uint16_t mov_op;
 	uint64_t target;
 	uint16_t jmp_call_op;
 }NativeCodeRelocPointJMP;
+
+TEST_STRUCT_SIZE(NativeCodeRelocPointJMP, 12);
 
 typedef struct _NativeaCodeRelocPointJCC
 #ifndef MSVC
@@ -145,10 +150,13 @@ typedef struct _NativeaCodeRelocPointJCC
 	NativeCodeRelocPointJMP jmp_point;
 }NativeCodeRelocPointJCC;
 
-typedef union _NativeaCodeRelocPos
+TEST_STRUCT_SIZE(NativeCodeRelocPointJCC, 12+2);
+
+typedef union
 #ifndef MSVC
 	__attribute__((aligned(1), packed))
 #endif
+	 _NativeaCodeRelocPos
 {
 	NativeCodeRelocPointJMP jmp;
 	NativeCodeRelocPointJCC jcc;
@@ -163,8 +171,10 @@ typedef struct _TempRelocEntry{
 }TempRelocEntry;
 
 void error(const char* err_msg) 
-#ifndef MSVC __attribute__((noreturn));
+#ifndef MSVC
+__attribute__((noreturn));
 #else
 ;
 #endif
+
 #endif
