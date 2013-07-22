@@ -140,10 +140,11 @@ typedef struct
 
 TEST_STRUCT_SIZE(NativeCodeRelocPointJMP, 12);
 
-typedef struct _NativeaCodeRelocPointJCC
+typedef struct
 #ifndef MSVC
 	__attribute__((aligned(1), packed))
 #endif
+	 _NativeaCodeRelocPointJCC
 {
 	uint8_t jcc_op_tttn;
 	uint8_t off8;
