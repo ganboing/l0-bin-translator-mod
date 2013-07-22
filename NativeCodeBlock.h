@@ -5,7 +5,7 @@
 #include "rbtree.h"
 
 #define TEST_STRUCT_SIZE(TYPE, SIZE)\
-	struct __TestTheStructSizeUsingZeroLengthArray_Struct_##TYPE { \
+	struct { \
 	char TYPE##SizeLargerThanExpected[(SIZE) - (long)sizeof(TYPE)];\
 	char TYPE##SizeSmallerThanExpected[(long)sizeof(TYPE) - (SIZE)];\
 };
