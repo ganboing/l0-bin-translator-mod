@@ -520,6 +520,7 @@ DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 				break;
 			}
 			(x64_opr1->type) = x64_OPR_TYPE_REG;
+			//fall through!
 		default:
 			x64EncodeMovMI64ToAX(x64instrs + (instr_cnt++), (i0_opr0->val.v64), TYPE_LEN_QWORD);
 			break;

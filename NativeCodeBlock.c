@@ -12,6 +12,7 @@
 #include "DecodeI0.h"
 #include "NativeCodeBlock.h"
 #include "sys_config.h"
+#include "VPC_env_types.h"
 
 #ifndef offsetof
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
@@ -109,6 +110,18 @@ void* malloc_executable(size_t size)
 	addr = ((unsigned long)ptr);
 	mprotect((addr & (~(pagesize - 1))), ((uint64_t)(size)) + (addr & (pagesize - 1)), PROT_READ | PROT_WRITE | PROT_EXEC);
 	return ptr;
+}
+
+static NativeCodeRelocPointJMP* CvtRelocPoint(NativeCodeRelocPos* reloc_point)
+{
+	if((reloc_point->jmp.mov_op) == mov_imm_rax_op)
+	{
+		return (&(reloc_point->jmp));
+	}
+	else
+	{
+		return (&(reloc_point->jcc.jmp_point));
+	}
 }
 
 inline uint32_t SpcHashFunc(uint64_t spc)
@@ -275,24 +288,51 @@ void ResolveExternalDeleting(NativeCodeBlockDesc* block, NativeCodeBlockDesc* bl
 		if((reloc_ent->i0_addr) < ((block_to_be_delete->SourceCodeBase) + (block_to_be_delete->SourceCodeSize)))
 		{
 			assert((reloc_ent->native_offset) < (block->NativeCodeSize));
-			NativeCodeRelocPoint* reloc_point  = (NativeCodeRelocPoint*)(((uint64_t)block->NativeCode) + (reloc_ent->native_offset));
-			if((reloc_point->jmp_call_op) == jmp_rax_op)
+			NativeCodeRelocPos* reloc_point_union  = (NativeCodeRelocPos*)(((uint64_t)(block->NativeCode)) + (reloc_ent->native_offset));
+			NativeCodeRelocPointJMP* reloc_point_jmp = CvtRelocPoint(reloc_point_union);
+			if((reloc_point_jmp->jmp_call_op) == jmp_rax_op)
 			{
-				assert((reloc_point->target) >= ((uint64_t)(block_to_be_delete->NativeCode)));
-				assert((reloc_point->target) < (((uint64_t)(block_to_be_delete->NativeCode)) + (block_to_be_delete->NativeCodeSize)));
-				(reloc_point->jmp_call_op) = call_rax_op;
-				(reloc_point->target) = ((uint64_t)(&(reloc_ent->mov_rsi_op)));
+				assert((reloc_point_jmp->target) >= ((uint64_t)(block_to_be_delete->NativeCode)));
+				assert((reloc_point_jmp->target) < (((uint64_t)(block_to_be_delete->NativeCode)) + (block_to_be_delete->NativeCodeSize)));
+				(reloc_point_jmp->jmp_call_op) = call_rax_op;
+				(reloc_point_jmp->target) = ((uint64_t)(&(reloc_ent->mov_rsi_op)));
 			}
 			else
 			{
-				assert((reloc_point->jmp_call_op) == call_rax_op);
-				assert((reloc_point->target) == ((uint64_t)(&(reloc_ent->mov_rsi_op))));
+				assert((reloc_point_jmp->jmp_call_op) == call_rax_op);
+				assert((reloc_point_jmp->target) == ((uint64_t)(&(reloc_ent->mov_rsi_op))));
 			}
-			if((reloc_point->mov_op) != mov_imm_rax_op)
+		}
+		else
+		{
+			break;
+		}
+		reloc_pos++;
+	}
+}
+
+void ResolveExternalRebasing(NativeCodeBlockDesc* block, NativeCodeBlockDesc* block_to_be_rebase, uint64_t newbase)
+{
+	uint64_t off64 = (newbase - ((uint64_t)block_to_be_rebase->NativeCode));
+	uint32_t reloc_pos = FindFirstRelocEntryBySpc(block->Relocs, block_to_be_rebase->SourceCodeBase);
+	while( reloc_pos < (block->Relocs.EffecSize))
+	{
+		NativeCodeRelocRealEntry* reloc_ent = (&(block->Relocs.list)[reloc_pos].realentry);
+		if((reloc_ent->i0_addr) < ((block_to_be_rebase->SourceCodeBase) + (block_to_be_rebase->SourceCodeSize)))
+		{
+			assert((reloc_ent->native_offset) < (block->NativeCodeSize));
+			NativeCodeRelocPos* reloc_point_union  = (NativeCodeRelocPos*)(((uint64_t)(block->NativeCode)) + (reloc_ent->native_offset));
+			NativeCodeRelocPointJMP* reloc_point_jmp = CvtRelocPoint(reloc_point_union);
+			if((reloc_point_jmp->jmp_call_op) == jmp_rax_op)
 			{
-				(reloc_point->jmp_call_op) = call_rax_op;
-				(reloc_point->target) = ((uint64_t)(&((block->Relocs.list)[reloc_pos].realentry.mov_rsi_op)));
-				(reloc_point->mov_op) = mov_imm_rax_op;
+				assert((reloc_point_jmp->target) >= ((uint64_t)(block_to_be_rebase->NativeCode)));
+				assert((reloc_point_jmp->target) < (((uint64_t)(block_to_be_rebase->NativeCode)) + (block_to_be_rebase->NativeCodeSize)));
+				(reloc_point_jmp->target) += off64;
+			}
+			else
+			{
+				assert((reloc_point_jmp->jmp_call_op) == call_rax_op);
+				assert((reloc_point_jmp->target) == ((uint64_t)(&(reloc_ent->mov_rsi_op))));
 			}
 		}
 		else
@@ -318,6 +358,36 @@ void TraverRefBlockPrepDel(NativeCodeBlockDesc* block_to_be_delete)
 			struct rb_node* next_root = (node_root->rb_right);
 			ResolveExternalDeleting(ref_node->block_ptr, block_to_be_delete);
 			free(ref_node);
+			node_root = next_root;
+		}
+		else
+		{
+			if(sp)
+			{
+				node_root = node_st[--sp];
+			}
+			else
+			{
+				return;
+			}
+		}
+	}
+}
+
+void TraverRefBlockRebase(NativeCodeBlockDesc* block_to_be_rebase, uint64_t newbase)
+{
+	uint64_t off64 = (newbase - ((uint64_t)(block_to_be_rebase->NativeCode)));
+	struct rb_node* node_st[64];
+	uint32_t sp = 0;
+	struct rb_node*	node_root = (block_to_be_rebase->RefedBlocks.tree_root.rb_node);
+	while(1)
+	{
+		if(node_root)
+		{
+			NativeCodeRefNode* ref_node = container_of(node_root, NativeCodeRefNode, treenode);
+			node_st[sp++] = (node_root->rb_left);
+			struct rb_node* next_root = (node_root->rb_right);
+			ResolveExternalRebasing(ref_node->block_ptr, block_to_be_rebase, newbase);
 			node_root = next_root;
 		}
 		else
@@ -471,7 +541,7 @@ void DeleteNativeCodeBlock(NativeCodeBlockDesc* block)
 	while(1)
 	{
 		NativeCodeRelocRealEntry* reloc_ent ;
-		NativeCodeRelocPoint* reloc_point ; 
+		NativeCodeRelocPointJMP* reloc_point ; 
 		while( 1 )
 		{
 			if(i==(block->Relocs.EffecSize))
@@ -480,7 +550,7 @@ void DeleteNativeCodeBlock(NativeCodeBlockDesc* block)
 			}
 			reloc_ent = (&(block->Relocs.list)[i].realentry);
 			assert((reloc_ent->native_offset) < (block->NativeCodeSize));
-			reloc_point = ((NativeCodeRelocPoint*)(((uint64_t)(block->NativeCode)) + (reloc_ent->native_offset)));
+			reloc_point = CvtRelocPoint(((NativeCodeRelocPos*)(((uint64_t)(block->NativeCode)) + reloc_ent->native_offset)));
 			if((reloc_point->jmp_call_op) == jmp_rax_op)
 			{
 				break;
@@ -494,9 +564,9 @@ void DeleteNativeCodeBlock(NativeCodeBlockDesc* block)
 			break;
 		}
 		NativeCodeBlockDesc* target_block = FindTargetBlock(reloc_ent->i0_addr);
-		DeleteFromRefSet(block, target_block);
 		assert(target_block);
 		assert((reloc_ent->i0_addr) < ((target_block->SourceCodeBase) + (target_block->SourceCodeSize)));
+		DeleteFromRefSet(block, target_block);
 		while((reloc_ent->i0_addr) <((target_block->SourceCodeBase) + (target_block->SourceCodeSize)))
 		{
 			if((reloc_point->jmp_call_op) == jmp_rax_op)
@@ -511,7 +581,7 @@ void DeleteNativeCodeBlock(NativeCodeBlockDesc* block)
 			}
 			reloc_ent++;
 			assert((reloc_ent->native_offset) < (block->NativeCodeSize));
-			reloc_point = ((NativeCodeRelocPoint*)(((uint64_t)(block->NativeCode)) + (reloc_ent->native_offset)));
+			reloc_point = CvtRelocPoint(((NativeCodeRelocPos*)(((uint64_t)(block->NativeCode)) + reloc_ent->native_offset)));
 			i++;
 			if( i == (block->Relocs.EffecSize))
 			{
@@ -551,17 +621,17 @@ void MergeBlocks(NativeCodeBlockDesc* first, NativeCodeBlockDesc* second)
 
 }
 
-uint64_t Translate(uint64_t spc, NativeCodeBlockDesc* from_block, NativeCodeRelocPoint* reloc_point)
+uint64_t Translate(uint64_t spc, NativeCodeBlockDesc* from_block, NativeCodeRelocPointJMP* reloc_point)
 {
 	NativeCodeBlockDesc* preblock = FindTargetBlock(spc);
 	NativeCodeBlockDesc* nxtblock = NULL;
+	unsigned is_expand_pre_block = 0;
 	if(preblock)
 	{
 		nxtblock = preblock->NxtBlock;
 		if(spc<((preblock->SourceCodeBase) + (preblock->SourceCodeSize)))
 		//jmp to an existing code block
 		{
-			assert(from_block != preblock);
 			uint32_t i0_offset = (spc - (preblock->SourceCodeBase));
 			NativeCodePartitionList part_list = preblock->Part;
 			NativeCodePartitionEntry part_ent = FindNCPartitionBySpc(part_list, i0_offset);
@@ -573,6 +643,11 @@ uint64_t Translate(uint64_t spc, NativeCodeBlockDesc* from_block, NativeCodeRelo
 			}
 			if(i0_addr != spc)
 			{
+				if(from_block == preblock)
+				{
+					//suicide code translated!
+					from_block = NULL;
+				}
 				NativeCodeBlockDesc* pre_new = preblock->PreBlock;
 				DeleteNativeCodeBlock(preblock);
 				preblock = pre_new;
@@ -580,6 +655,7 @@ uint64_t Translate(uint64_t spc, NativeCodeBlockDesc* from_block, NativeCodeRelo
 			}
 			else
 			{
+				assert(from_block != preblock);
 				if(from_block)
 				{
 					assert(reloc_point);
@@ -590,12 +666,31 @@ uint64_t Translate(uint64_t spc, NativeCodeBlockDesc* from_block, NativeCodeRelo
 				return native_addr;
 			}
 		}
+		else if(spc == ((preblock->SourceCodeBase) + (preblock->SourceCodeSize)))
+		{
+			if(from_block == preblock)
+			{
+				from_block = NULL;
+			}
+			//expand the preblock!!
+			is_expand_pre_block = 1;
+		}
 	}
 	else
 	{
 		nxtblock = GlobalNCDescFirst;
 	}
-	
+	uint64_t i0_limit;
+	if(nxtblock)
+	{
+		i0_limit = ((nxtblock->SourceCodeBase) - 1);
+	}
+	else
+	{
+		i0_limit = (_pi0codemeta->i0_code_file_len + I0_CODE_BEGIN);
+	}
+	i0_limit = ( ((i0_limit - spc) > MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN) ? (spc + MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN) : i0_limit );
+
 }
 
 uint64_t JmpFromNativeBlock(uint64_t srcblock, uint64_t spc, uint64_t tpc)
@@ -708,32 +803,10 @@ inline uint32_t FindFirstRelocEntryBySpc(NativeCodeRelocList list,uint64_t spc)
 
 void RebaseNativeCodeBlock(NativeCodeBlockDesc* desc, uint64_t newbase)
 {
-	uint64_t nativecodelimit = (((uint64_t)(desc->NativeCode)) + (desc->NativeCodeSize));
 	uint32_t i;
 	uint64_t offset64 = (newbase - ((uint64_t)(desc->NativeCode)));
 	// relocate jmp addr in the blocks that referencing the current block
-	for(i=0;i<((desc->RefedBlocks).EffecSize);i++)
-	{
-		NativeCodeBlockDesc* refer = ((desc->RefedBlocks).list)[i];
-		NativeCodeRelocList reloclist = refer->Relocs;
-		uint32_t j = FindFirstEntryBySpc(reloclist, (desc->SourceCodeBase));
-		while((j<(reloclist.EffecSize)))
-		{
-			if((reloclist.list)[j].realentry.i0_addr < nativecodelimit)
-			{
-				uint8_t* reloc_point = (uint8_t*)(((uint64_t)(refer->NativeCode)) + (reloclist.list)[j].realentry.native_offset);
-				if(((*reloc_point) == 0x48) && ((*(reloc_point + 1)) == 0xb8) && ((*(reloc_point + 11)) == 0xe0))
-				{
-					(*((uint64_t*)(reloc_point + 2))) += offset64;
-				}
-				j++;
-			}
-			else
-			{
-				break;
-			}
-		}
-	}
+	TraverRefBlockRebase(desc, newbase);
 	// rebase the hash table entries
 	IJTabRefEntry* ijtabent = (desc->RefedIJTab).list;
 	for(i=0;i<((desc->RefedIJTab).EffecSize);i++)

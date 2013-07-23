@@ -213,4 +213,6 @@
 // Interrupt descriptor table
 #define IDT_BASE       (0x100000800)
 
+#define MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN	(0x10000ULL)
+
 #endif // _SYS_CONFIG_H_
