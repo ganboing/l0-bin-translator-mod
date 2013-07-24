@@ -1397,7 +1397,7 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t* tpc, uint64_t* nativel
 		break;
 	case OP_INT:
 		i0instrlen = BYTE_OP_INT;
-		i0instrlen += 8;
+		i0instrlen += 1;
 		if (i0instrlen > i0len) {
 			RETURN_DECODE_STATUS(I0_DECODE_SEGMENT_LIMIT, 0, 0);
 		}

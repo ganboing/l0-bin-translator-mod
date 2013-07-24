@@ -43,8 +43,10 @@ static const uint16_t call_rax_op = 0xd0ff;
 
 //Translate time working area
 static TempRelocEntry TransTimeTempRelocList[1024*1024];
+static uint8_t TransTimeNativeCodeCache[2*(MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN)];
 static unsigned int TransTimeRLCnt;
 static TempRelocEntry* TransTimeRLHead;
+static TempRelocEntry* TransTimeRLTail;
 static struct rb_root TransTimeRLTreeRoot;
 
 static struct rb_root GlobalNCDescRbRoot;
@@ -145,7 +147,7 @@ void InitTempRelocList(void)
 {
 	TransTimeRLTreeRoot.rb_node = NULL;
 	TransTimeRLCnt = 0;
-	TransTimeRLHead = NULL;
+	TransTimeRLTail = TransTimeRLHead = NULL;
 }
 
 
@@ -194,6 +196,10 @@ void InsertTempRelocList(uint64_t i0_addr, uint64_t native_addr)
 					{
 						(newent->next->prev) = newent;
 					}
+					else
+					{
+						TransTimeRLTail = newent;
+					}
 					break;
 				}
 			}
@@ -202,7 +208,7 @@ void InsertTempRelocList(uint64_t i0_addr, uint64_t native_addr)
 	else
 	{
 		(newent->prev) = (newent->next) = NULL;
-		TransTimeRLHead = newent;
+		TransTimeRLTail = TransTimeRLHead = newent;
 	}
 	rb_link_node((&(newent->tree_node)), parent, insert_pos);
 	rb_insert_color((&(newent->tree_node)),(&(TransTimeRLTreeRoot))); 
@@ -621,27 +627,32 @@ void MergeBlocks(NativeCodeBlockDesc* first, NativeCodeBlockDesc* second)
 
 }
 
-uint64_t Translate(uint64_t spc, NativeCodeBlockDesc* from_block, NativeCodeRelocPointJMP* reloc_point)
+uint64_t Translate(uint8_t* spc, NativeCodeBlockDesc* from_block, NativeCodeRelocPointJMP* reloc_point)
 {
-	NativeCodeBlockDesc* preblock = FindTargetBlock(spc);
+	uint64_t spc_shadow = ((uint64_t)spc);
+	if( (((uint64_t)spc) < I0_CODE_BEGIN) || (((uint64_t) spc) >= ((_pi0codemeta->i0_code_file_len) + I0_CODE_BEGIN)))
+	{
+		error("translate target out of range !!!");
+	}
+	NativeCodeBlockDesc* preblock = FindTargetBlock((uint64_t)spc);
 	NativeCodeBlockDesc* nxtblock = NULL;
 	unsigned is_expand_pre_block = 0;
 	if(preblock)
 	{
 		nxtblock = preblock->NxtBlock;
-		if(spc<((preblock->SourceCodeBase) + (preblock->SourceCodeSize)))
+		if(((uint64_t)spc) < ((preblock->SourceCodeBase) + (preblock->SourceCodeSize)))
 		//jmp to an existing code block
 		{
-			uint32_t i0_offset = (spc - (preblock->SourceCodeBase));
+			uint32_t i0_offset = ( ((uint64_t)spc) - (preblock->SourceCodeBase));
 			NativeCodePartitionList part_list = preblock->Part;
 			NativeCodePartitionEntry part_ent = FindNCPartitionBySpc(part_list, i0_offset);
 			uint64_t i0_addr = (preblock->SourceCodeBase) + part_ent.i0_offset;
 			uint64_t native_addr = ((uint64_t)(preblock->NativeCode)) + part_ent.native_offset;
-			while(i0_addr < spc)
+			while(i0_addr < ((uint64_t)spc))
 			{
 				FakeStepI0(&i0_addr, &native_addr);
 			}
-			if(i0_addr != spc)
+			if(i0_addr != ((uint64_t)spc))
 			{
 				if(from_block == preblock)
 				{
@@ -666,7 +677,7 @@ uint64_t Translate(uint64_t spc, NativeCodeBlockDesc* from_block, NativeCodeRelo
 				return native_addr;
 			}
 		}
-		else if(spc == ((preblock->SourceCodeBase) + (preblock->SourceCodeSize)))
+		else if( ((uint64_t)spc) == ((preblock->SourceCodeBase) + (preblock->SourceCodeSize)))
 		{
 			if(from_block == preblock)
 			{
@@ -689,8 +700,52 @@ uint64_t Translate(uint64_t spc, NativeCodeBlockDesc* from_block, NativeCodeRelo
 	{
 		i0_limit = (_pi0codemeta->i0_code_file_len + I0_CODE_BEGIN);
 	}
-	i0_limit = ( ((i0_limit - spc) > MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN) ? (spc + MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN) : i0_limit );
+	unsigned is_block_limit_effec = 0;
+	if( (i0_limit - ((uint64_t)spc)) > MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN)
+	{
+		i0_limit = ((uint64_t)spc) + MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN;
+		is_block_limit_effec = 1;
+	}
+	i0_limit = ( ((i0_limit - ((uint64_t)spc)) > MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN) ? (((uint64_t)spc) + MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN) : i0_limit );
+	uint64_t nativelimit = 0;
+	DECODE_STATUS decode_status;
+	TempRelocEntry* nxt_xref = NULL; 
+	while (1)
+	{
+		if(nxt_xref)
+		{
+			do{
+				if( (nxt_xref->i0_addr) < ((uint64_t)spc))
+				{
+					nxt_xref = nxt_xref->next;
+				}
+				else
+				{
+					break;
+				}
+			}while(nxt_xref);
+		}
+		else
+		{
+			if(TransTimeRLTail &&	( (TransTimeRLTail->i0_addr) >= ((uint64_t)spc)))
+			{
+				nxt_xref = TransTimeRLTail;
+			}
+		}
 
+		decode_status = TranslateI0ToNative((&spc), TransTimeNativeCodeCache, (&nativelimit), ((uint8_t*)i0_limit), 1);
+		if( (decode_status.status == I0_DECODE_SEGMENT_LIMIT) || (decode_status.status == I0_DECODE_INVALID_INSTRUCTION))
+		{
+			break;
+		}
+		else
+		{
+			if(decode_status.status == I0_DECODE_BRANCH)
+			{
+
+			}
+		}
+	}
 }
 
 uint64_t JmpFromNativeBlock(uint64_t srcblock, uint64_t spc, uint64_t tpc)
