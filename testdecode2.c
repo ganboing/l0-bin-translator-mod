@@ -1554,7 +1554,7 @@ typedef struct _i0_code_meta_t {
 
 extern i0_code_meta_t *_pi0codemeta;
 
-uint64_t run_i0_code2(uint64_t __tmp__)
+/*uint64_t run_i0_code2(uint64_t __tmp__)
 {
 	static uint8_t native_code_cache[1024];
 	(void)__tmp__;
@@ -1602,4 +1602,4 @@ uint64_t run_i0_code2(uint64_t __tmp__)
 	}
 	while(1)
 	{}
-}
+}*/
