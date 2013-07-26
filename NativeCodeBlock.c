@@ -43,7 +43,7 @@ static const uint16_t call_rax_op = 0xd0ff;
 
 //Translate time working area
 static TempRelocEntry TransTimeTempRelocList[1024*1024];
-static uint8_t TransTimeNativeCodeCache[2*(MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN)];
+static uint8_t TransTimeNativeCodeCache[MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN];
 static unsigned int TransTimeRLCnt;
 static TempRelocEntry* TransTimeRLHead;
 static TempRelocEntry* TransTimeRLTail;
@@ -627,7 +627,24 @@ void MergeBlocks(NativeCodeBlockDesc* first, NativeCodeBlockDesc* second)
 
 }
 
-uint64_t Translate(uint8_t* spc, NativeCodeBlockDesc* from_block, NativeCodeRelocPointJMP* reloc_point)
+void PrintTempRelocList(void)
+{
+	printf("TempRelocList:\ni0 addr\t\tnative addr");
+	TempRelocEntry* i = TransTimeRLHead;
+	while(i)
+	{
+		printf("%lx\t\t%lx\n", i->i0_addr, i->native_addr);
+		i = i->next;
+	}
+}
+
+typedef struct
+{
+	uint64_t nativecode;
+	NativeCodeBlockDesc* nc_block;
+}TransReturnStatus;
+
+TransReturnStatus Translate(uint8_t* spc, NativeCodeBlockDesc* from_block, NativeCodeRelocPointJMP* reloc_point)
 {
 	uint64_t spc_shadow = ((uint64_t)spc);
 	if( (((uint64_t)spc) < I0_CODE_BEGIN) || (((uint64_t) spc) >= ((_pi0codemeta->i0_code_file_len) + I0_CODE_BEGIN)))
@@ -674,7 +691,8 @@ uint64_t Translate(uint8_t* spc, NativeCodeBlockDesc* from_block, NativeCodeRelo
 					(reloc_point->target) = native_addr;
 					AddToRefSet(from_block, preblock);
 				}
-				return native_addr;
+				TransReturnStatus result = {native_addr, preblock};
+				return result;
 			}
 		}
 		else if( ((uint64_t)spc) == ((preblock->SourceCodeBase) + (preblock->SourceCodeSize)))
@@ -694,7 +712,7 @@ uint64_t Translate(uint8_t* spc, NativeCodeBlockDesc* from_block, NativeCodeRelo
 	uint64_t i0_limit;
 	if(nxtblock)
 	{
-		i0_limit = ((nxtblock->SourceCodeBase) - 1);
+		i0_limit = (nxtblock->SourceCodeBase);
 	}
 	else
 	{
@@ -706,12 +724,72 @@ uint64_t Translate(uint8_t* spc, NativeCodeBlockDesc* from_block, NativeCodeRelo
 		i0_limit = ((uint64_t)spc) + MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN;
 		is_block_limit_effec = 1;
 	}
-	i0_limit = ( ((i0_limit - ((uint64_t)spc)) > MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN) ? (((uint64_t)spc) + MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN) : i0_limit );
 	uint64_t nativelimit = 0;
 	DECODE_STATUS decode_status;
 	TempRelocEntry* nxt_xref = NULL; 
+	InitTempRelocList();
+	unsigned is_expand_nxt_block = 0;
 	while (1)
 	{
+		decode_status = TranslateI0ToNative((&spc), TransTimeNativeCodeCache, (&nativelimit), ((uint8_t*)i0_limit), 1);
+		if( decode_status.status == I0_DECODE_SEGMENT_LIMIT) 
+		{
+			if(((uint64_t)spc) == spc_shadow)
+			{
+				if(nxtblock)
+				{
+					if(from_block == nxtblock)
+					{
+						from_block = NULL;
+					}
+					NativeCodeBlockDesc* nxt_new = nxtblock->NxtBlock;
+					DeleteNativeCodeBlock(nxtblock);
+					nxtblock = nxt_new;
+					if(nxtblock)
+					{
+						i0_limit = (nxtblock->SourceCodeBase);
+					}
+					else
+					{
+						i0_limit = (_pi0codemeta->i0_code_file_len + I0_CODE_BEGIN);
+					}
+					is_block_limit_effec = 0;
+					if( (i0_limit - ((uint64_t)spc)) > MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN)
+					{
+						i0_limit = ((uint64_t)spc) + MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN;
+						is_block_limit_effec = 1;
+					}
+				}
+				else
+				{
+					decode_status.status = I0_DECODE_INVALID_INSTRUCTION;
+					break;
+				}
+			}
+			else
+			{
+				break;
+			}
+		}
+		if(decode_status.status == I0_DECODE_INVALID_INSTRUCTION)
+		{
+			break;
+		}
+		if( (decode_status.status == I0_DECODE_BRANCH_UNCOND) || (decode_status.status == I0_DECODE_BRANCH_COND))
+		{
+			NativeCodeRelocPos* nc_reloc_point;
+			switch(decode_status.detail)
+			{
+			case I0_DECODE_JCC:
+				nc_reloc_point = ((NativeCodeRelocPos*)(decode_status.detail2));
+				InsertTempRelocList((nc_reloc_point->jcc.jmp_point.target) , decode_status.detail2);
+				break;
+			case I0_DECODE_JMP:
+				nc_reloc_point = ((NativeCodeRelocPos*)(decode_status.detail2));
+				InsertTempRelocList((nc_reloc_point->jmp.target) , decode_status.detail2);
+				break;
+			}
+		}
 		if(nxt_xref)
 		{
 			do{
@@ -732,19 +810,20 @@ uint64_t Translate(uint8_t* spc, NativeCodeBlockDesc* from_block, NativeCodeRelo
 				nxt_xref = TransTimeRLTail;
 			}
 		}
-
-		decode_status = TranslateI0ToNative((&spc), TransTimeNativeCodeCache, (&nativelimit), ((uint8_t*)i0_limit), 1);
-		if( (decode_status.status == I0_DECODE_SEGMENT_LIMIT) || (decode_status.status == I0_DECODE_INVALID_INSTRUCTION))
+		if( (((uint64_t) spc) - spc_shadow) > MIN_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN)
 		{
-			break;
-		}
-		else
-		{
-			if(decode_status.status == I0_DECODE_BRANCH)
+			if(decode_status.status == I0_DECODE_BRANCH_UNCOND)
 			{
-
+				if((!nxt_xref) || ( ((nxt_xref->i0_addr) - ((uint64_t)spc)) > MAX_TRANSLATE_OVER_LOOK_CODE_SIZE))
+				{
+					break;
+				}
 			}
 		}
+	}
+	switch(decode_status.status)
+	{
+		case 
 	}
 }
 

@@ -11,12 +11,12 @@
 	#define I0_DECODE_OPCODE_B_UNDEFINED		0x06
 	#define I0_DECODE_OPERAND_UNDEFINED			0x07
 #define I0_DECODE_SEGMENT_LIMIT				0x03
-#define I0_DECODE_BRANCH					0x04
-	#define I0_DECODE_JCC						0x01
-	#define I0_DECODE_JMP						0x02
-	#define I0_DECODE_JMP_INDIR					0x03
-	#define I0_DECODE_EXIT						0x04
-	#define I0_DECODE_INT						0x05
+#define I0_DECODE_BRANCH_COND				0x04
+	#define I0_DECODE_JCC						0x00
+#define I0_DECODE_BRANCH_UNCOND				0x05
+	#define I0_DECODE_JMP						0x01
+	#define I0_DECODE_JMP_INDIR					0x02
+	#define I0_DECODE_EXIT						0x03
 
 typedef struct _DECODE_STATUS{
 	unsigned long status;

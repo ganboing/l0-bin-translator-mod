@@ -234,14 +234,14 @@ DECODE_STATUS TranslateINT(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nat
 	//callq *(%rdx, %rax, 8)
 	instr_cnt++;
 	Writex64Instrs(x64instrs, instr_cnt, nativeblock, nativelimit, is_write);
-	RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_INT, (*nativelimit));
+	RETURN_DECODE_STATUS(I0_TRANS_SUCCESS_NO_FURTHER_PROC, 0, 0);
 }
 
 //typedef struct DECODE_STATUS ;
 DECODE_STATUS TranslateBJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
 {
 	x64EncodeCallAbsImm64(nativeblock, nativelimit, (i0instr->opr[0].val.v64), is_write);
-	RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_JMP, (*nativelimit) -12);
+	RETURN_DECODE_STATUS(I0_DECODE_BRANCH_UNCOND, I0_DECODE_JMP, (*nativelimit) -12);
 }
 
 DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
@@ -308,7 +308,7 @@ DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nat
 	{
 		(*nativelimit) += (5+3+4+4+3+5+7);
 	}
-	RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_JMP_INDIR, (*nativelimit));
+	RETURN_DECODE_STATUS(I0_DECODE_BRANCH_UNCOND, I0_DECODE_JMP_INDIR, (*nativelimit));
 }
 
 DECODE_STATUS TranslateBZNZ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
@@ -350,7 +350,7 @@ DECODE_STATUS TranslateBZNZ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 			((!cmp_imm_z) && ((i0instr->option) == OPT_B_NZ)))
 		{
 			x64EncodeCallAbsImm64(nativeblock, nativelimit,(i0instr->opr[2].val.v64),is_write);
-			RETURN_DECODE_STATUS(I0_DECODE_BRANCH,I0_DECODE_JMP,(*nativelimit)-12);
+			RETURN_DECODE_STATUS(I0_DECODE_BRANCH_UNCOND,I0_DECODE_JMP,(*nativelimit)-12);
 		}
 		else
 		{
@@ -373,7 +373,7 @@ DECODE_STATUS TranslateBZNZ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 	x64EncodeJmpCcRel8(x64instrs + (instr_cnt++), tttn, 12);
 	Writex64Instrs(x64instrs,instr_cnt, nativeblock, nativelimit, is_write);
 	x64EncodeCallAbsImm64(nativeblock, nativelimit, (i0instr->opr[2].val.v64), is_write);
-	RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_JCC, (*nativelimit) - 12);
+	RETURN_DECODE_STATUS(I0_DECODE_BRANCH_COND, I0_DECODE_JCC, (*nativelimit) - 14);
 }
 
 DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write) {
@@ -501,7 +501,7 @@ DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 		}
 		if (is_jmp) {
 			x64EncodeCallAbsImm64(nativeblock, nativelimit, (i0instr->opr[2].val.v64), is_write);
-			RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_JMP, (*nativelimit) - 12);
+			RETURN_DECODE_STATUS(I0_DECODE_BRANCH_UNCOND, I0_DECODE_JMP, (*nativelimit) - 12);
 		} else {
 			RETURN_DECODE_STATUS(I0_TRANS_SUCCESS_NO_FURTHER_PROC, 0, 0);
 		}
@@ -566,7 +566,7 @@ DECODE_STATUS TranslateBCMP(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* na
 	x64EncodeJmpCcRel8(x64instrs+(instr_cnt++), tttn, 12);
 	Writex64Instrs(x64instrs, instr_cnt, nativeblock, nativelimit, is_write);
 	x64EncodeCallAbsImm64(nativeblock, nativelimit, i0instr->opr[2].val.v64, is_write);
-	RETURN_DECODE_STATUS(I0_DECODE_BRANCH, I0_DECODE_JCC, (*nativelimit) -12);
+	RETURN_DECODE_STATUS(I0_DECODE_BRANCH_COND, I0_DECODE_JCC, (*nativelimit) -14);
 }
 
 DECODE_STATUS TranslateNOP(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit, int is_write)
@@ -632,7 +632,7 @@ DECODE_STATUS TranslateEXIT(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit,
 	instr_t __instr;
 	__instr.option = (instr->option);
 	translate2x86_64_exit((&__instr), is_write, ((char*)tpc), nativelimit, 0, 0);
-	RETURN_DECODE_STATUS(I0_DECODE_BRANCH,I0_DECODE_EXIT,(*nativelimit));
+	RETURN_DECODE_STATUS(I0_DECODE_BRANCH_UNCOND,I0_DECODE_EXIT,(*nativelimit));
 }
 
 DECODE_STATUS TranslateSPAWN(I0INSTR* instr, uint8_t* tpc, uint64_t* nativelimit, int is_write)
@@ -1531,6 +1531,20 @@ DECODE_STATUS TranslateI0ToNative(uint8_t** spc, uint8_t* tpc, uint64_t* nativel
 		break;
 	}
 
+}
+
+void AppendTailJump(uint8_t* nativeblock, uint64_t* nativelimit, uint64_t i0_addr, uint32_t func_ptr)
+{
+	(*((uint16_t*)(nativeblock + (*nativelimit)))) = 0xbf48;
+	(*nativelimit) += 2;
+	(*((uint64_t*)(nativeblock + (*nativelimit)))) = i0_addr;
+	(*nativelimit) += 8;
+	(*(nativeblock + (*nativelimit))) = 0xb8;
+	(*nativelimit) ++ ;
+	(*((uint32_t*)(nativeblock + (*nativelimit)))) = func_ptr;
+	(*nativelimit) += 4;
+	(*((uint16_t*)(nativeblock + (*nativelimit)))) = 0xe0ff;
+	(*nativelimit) += 2;
 }
 
 

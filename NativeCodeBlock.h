@@ -110,7 +110,8 @@ typedef struct _NativeCodePartitionList
 	uint32_t AllocSize;
 }NativeCodePartitionList;
 
-#define NC_BLOCK_CR_TAIL_JMP	0x01
+#define NC_BLOCK_CR_TAIL_JMP			0x01
+#define NC_BLOCK_CR_TAIL_UD_HANDLER		0x02
 
 struct _NativeCodeBlockDesc {
 	struct rb_node DescRbNode;
