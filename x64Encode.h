@@ -80,6 +80,7 @@ typedef union _OFFSET_TYPE {
 
 typedef struct _x64_OPR{
 	uint8_t type;
+	uint8_t full_encoded;
 #define x64_OPR_TYPE_REG		1
 #define x64_OPR_TYPE_M			2
 #define x64_OPR_I				0
@@ -102,5 +103,10 @@ typedef struct _x64INSTR{
 	IMM_TYPE imm;
 
 }x64INSTR;
+
+typedef struct {
+	unsigned sp;
+	x64INSTR x64instrs[10];
+}x64INSTR_ST;
 
 #endif /* X64ENCODE_H_ */

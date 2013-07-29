@@ -25,5 +25,7 @@ DECODE_STATUS TranslateSHIFT(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* n
 DECODE_STATUS TranslateCONV(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write);
 DECODE_STATUS TranslateBJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write);
 DECODE_STATUS TranslateBIJ(I0INSTR* i0instr, uint8_t* nativeblock, uint64_t* nativelimit, int is_write);
+void AppendTailJump(uint8_t* nativeblock, uint64_t* nativelimit, uint64_t i0_addr, int is_write);
+void AppendUDHandler(uint8_t* nativeblock, uint64_t* nativelimit, uint64_t i0_addr, uint32_t func_ptr, int is_write);
 
 #endif /* DECODEI0_H_ */

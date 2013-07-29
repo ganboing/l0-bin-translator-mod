@@ -38,6 +38,10 @@ __inline static void Writex64Instrs(x64INSTR* instrs,uint32_t instr_cnt, uint8_t
 		(*nativelimit) += (instr->imm_len);
 	}
 }
+__inline static void Writex64InsStk(x64INSTR_ST* ins_stk, uint8_t* nativeblock, uint64_t* nativelimit, int is_write)
+{
+	Writex64Instrs(ins_stk->x64instrs, ins_stk->sp, nativeblock, nativelimit, is_write);
+}
 __inline static uint8_t EncodeModRM(uint8_t mod, uint8_t rm, uint8_t reg)
 {
 	uint8_t modrm = ((mod<<6)|(reg<<3)|rm);

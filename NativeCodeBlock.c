@@ -14,6 +14,10 @@
 #include "sys_config.h"
 #include "VPC_env_types.h"
 
+
+#define NC_BLOCK_CR_TAIL_JMP			0x01
+#define NC_BLOCK_CR_TAIL_UD_HANDLER		0x02
+
 #ifndef offsetof
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
 #endif
@@ -43,7 +47,7 @@ static const uint16_t call_rax_op = 0xd0ff;
 
 //Translate time working area
 static TempRelocEntry TransTimeTempRelocList[1024*1024];
-static uint8_t TransTimeNativeCodeCache[MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN];
+static uint8_t TransTimeNativeCodeCache[(MAX_TRANSLATE_BLOCK_SIZE_I0_MOD_TRAN)*16];
 static unsigned int TransTimeRLCnt;
 static TempRelocEntry* TransTimeRLHead;
 static TempRelocEntry* TransTimeRLTail;
@@ -150,8 +154,20 @@ void InitTempRelocList(void)
 	TransTimeRLTail = TransTimeRLHead = NULL;
 }
 
+void DeleteTempReloc(TempRelocEntry* entry)
+{
+	//XXX:Will not delete from the rb-tree, only delete from the linked list!!!
+	if(entry->prev)
+	{
+		(entry->prev->next) = (entry->next);
+	}
+	if(entry->next)
+	{
+		(entry->next->prev) = (entry->prev);
+	}
+}
 
-void InsertTempRelocList(uint64_t i0_addr, uint64_t native_addr)
+void InsertTempReloc(uint64_t i0_addr, uint64_t native_addr)
 {
 	struct rb_node** insert_pos = (&(TransTimeRLTreeRoot.rb_node));
 	TempRelocEntry* newent = TransTimeTempRelocList + TransTimeRLCnt;
@@ -238,10 +254,11 @@ void DeleteFromRefSet(NativeCodeBlockDesc* ref_to_be_deleted, NativeCodeBlockDes
 	{
 		NativeCodeRefNode* ref_node = container_of(ref_set_root, NativeCodeRefNode, treenode);
 		NativeCodeBlockDesc* ref_block = (ref_node->block_ptr);
-		if(((uint64_t)ref_block) == ((uint64_t)ref_to_be_deleted))
+		if(ref_block == ref_to_be_deleted)
 		{
 			rb_erase(ref_set_root, (&(block->RefedBlocks.tree_root)));
 			free(ref_node);
+			block->RefedBlocks.RefCnt --;
 			return;
 		}
 		else
@@ -266,7 +283,7 @@ void AddToRefSet(NativeCodeBlockDesc* ref_to_be_added, NativeCodeBlockDesc* bloc
 	while(parent = (*insert_pos))
 	{
 		NativeCodeBlockDesc* parent_block = container_of(parent, NativeCodeRefNode, treenode);
-		if((parent_block->SourceCodeBase) == (ref_to_be_added->SourceCodeBase))
+		if(parent_block == ref_to_be_added)
 		{
 			return;
 		}
@@ -283,6 +300,7 @@ void AddToRefSet(NativeCodeBlockDesc* ref_to_be_added, NativeCodeBlockDesc* bloc
 	new_ref_node->block_ptr = ref_to_be_added;
 	rb_link_node((&(new_ref_node->treenode)), parent, insert_pos);
 	rb_insert_color((&new_ref_node->treenode), (&(block->RefedBlocks.tree_root)));
+	block->RefedBlocks.RefCnt++;
 }
 
 void ResolveExternalDeleting(NativeCodeBlockDesc* block, NativeCodeBlockDesc* block_to_be_delete)
@@ -468,6 +486,16 @@ void InsertNativeCodeBlock(NativeCodeBlockDesc* newblock)
 	}
 	rb_link_node((&(newblock->DescRbNode)), parent, insert_pos);
 	rb_insert_color((&(newblock->DescRbNode)), (&(GlobalNCDescRbRoot)));
+
+	//for debug
+	if(newblock->PreBlock)
+	{
+		assert((newblock->SourceCodeBase) >= ((newblock->PreBlock->SourceCodeBase) + (newblock->PreBlock->SourceCodeSize)));
+	}
+	if(newblock->NxtBlock)
+	{
+		assert((newblock->NxtBlock->SourceCodeBase) >= ((newblock->SourceCodeBase) + (newblock->SourceCodeSize)));
+	}
 	return;
 }
 
@@ -644,6 +672,13 @@ typedef struct
 	NativeCodeBlockDesc* nc_block;
 }TransReturnStatus;
 
+NativeCodeBlockDesc* CreateNewNCBLock(void)
+{
+	NativeCodeBlockDesc* newblock = (NativeCodeBlockDesc*)malloc(sizeof(NativeCodeBlockDesc));
+	memset(newblock, 0, sizeof(NativeCodeBlockDesc));
+	return newblock;
+}
+
 TransReturnStatus Translate(uint8_t* spc, NativeCodeBlockDesc* from_block, NativeCodeRelocPointJMP* reloc_point)
 {
 	uint64_t spc_shadow = ((uint64_t)spc);
@@ -726,12 +761,13 @@ TransReturnStatus Translate(uint8_t* spc, NativeCodeBlockDesc* from_block, Nativ
 	}
 	uint64_t nativelimit = 0;
 	DECODE_STATUS decode_status;
-	TempRelocEntry* nxt_xref = NULL; 
+	TempRelocEntry* nxt_xref = NULL;
+	uint64_t cr_flag = 0;
 	InitTempRelocList();
 	unsigned is_expand_nxt_block = 0;
 	while (1)
 	{
-		decode_status = TranslateI0ToNative((&spc), TransTimeNativeCodeCache, (&nativelimit), ((uint8_t*)i0_limit), 1);
+		decode_status = TranslateI0ToNative((&spc), NULL, (&nativelimit), ((uint8_t*)i0_limit), 0);
 		if( decode_status.status == I0_DECODE_SEGMENT_LIMIT) 
 		{
 			if(((uint64_t)spc) == spc_shadow)
@@ -782,11 +818,11 @@ TransReturnStatus Translate(uint8_t* spc, NativeCodeBlockDesc* from_block, Nativ
 			{
 			case I0_DECODE_JCC:
 				nc_reloc_point = ((NativeCodeRelocPos*)(decode_status.detail2));
-				InsertTempRelocList((nc_reloc_point->jcc.jmp_point.target) , decode_status.detail2);
+				InsertTempReloc((nc_reloc_point->jcc.jmp_point.target) , decode_status.detail2);
 				break;
 			case I0_DECODE_JMP:
 				nc_reloc_point = ((NativeCodeRelocPos*)(decode_status.detail2));
-				InsertTempRelocList((nc_reloc_point->jmp.target) , decode_status.detail2);
+				InsertTempReloc((nc_reloc_point->jmp.target) , decode_status.detail2);
 				break;
 			}
 		}
@@ -821,9 +857,32 @@ TransReturnStatus Translate(uint8_t* spc, NativeCodeBlockDesc* from_block, Nativ
 			}
 		}
 	}
+	if((nxtblock) && (((uint64_t)spc) == (nxtblock->SourceCodeBase)))
+	{
+		is_expand_nxt_block = 1;
+	}
 	switch(decode_status.status)
 	{
-		case 
+	case I0_DECODE_INVALID_INSTRUCTION:
+		cr_flag = NC_BLOCK_CR_TAIL_UD_HANDLER;
+		AppendUDHandler(NULL, (&nativelimit), 0,0,0); 
+		break;
+	case I0_DECODE_SEGMENT_LIMIT:
+		if(!is_expand_nxt_block)
+		{
+			cr_flag = NC_BLOCK_CR_TAIL_JMP;
+			AppendTailJump(NULL, (&nativelimit), 0,0);
+			InsertTempReloc(((uint64_t)spc), nativelimit);
+		}
+		break;
+	}
+	switch((is_expand_pre_block<<1) + (is_expand_nxt_block))
+	{
+	case 0: //create a new block
+		{
+			
+		}
+		break;
 	}
 }
 
@@ -939,12 +998,15 @@ void RebaseNativeCodeBlock(NativeCodeBlockDesc* desc, uint64_t newbase)
 {
 	uint32_t i;
 	uint64_t offset64 = (newbase - ((uint64_t)(desc->NativeCode)));
-	// relocate jmp addr in the blocks that referencing the current block
-	TraverRefBlockRebase(desc, newbase);
-	// rebase the hash table entries
-	IJTabRefEntry* ijtabent = (desc->RefedIJTab).list;
-	for(i=0;i<((desc->RefedIJTab).EffecSize);i++)
+	if(offset64)
 	{
-		((ijtabent[i]).tabent)->tpc += offset64;
+		// relocate jmp addr in the blocks that referencing the current block
+		TraverRefBlockRebase(desc, newbase);
+		// rebase the hash table entries
+		IJTabRefEntry* ijtabent = (desc->RefedIJTab).list;
+		for(i=0;i<((desc->RefedIJTab).EffecSize);i++)
+		{
+			((ijtabent[i]).tabent)->tpc += offset64;
+		}
 	}
 }

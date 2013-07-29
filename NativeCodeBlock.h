@@ -95,6 +95,7 @@ typedef struct _NativeCodeRefNode{
 
 typedef struct _NativeCodeRefSet{
 	struct rb_root tree_root;
+	uint64_t RefCnt;
 }NativeCodeRefSet;
 
 typedef struct _NativeCodePartitionEntry
@@ -110,8 +111,6 @@ typedef struct _NativeCodePartitionList
 	uint32_t AllocSize;
 }NativeCodePartitionList;
 
-#define NC_BLOCK_CR_TAIL_JMP			0x01
-#define NC_BLOCK_CR_TAIL_UD_HANDLER		0x02
 
 struct _NativeCodeBlockDesc {
 	struct rb_node DescRbNode;
