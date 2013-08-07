@@ -315,9 +315,17 @@ __inline static void x64EncodeAluEI(x64INSTR* instr, uint8_t op, x64_OPR E,x64_O
 	switch(oprsize)
 	{
 	case TYPE_LEN_BYTE:
-		instr->opcode[0] = 0x80;
-		instr->imm_len = 1;
-		instr->imm.v8 = I.imm.v8;
+		if((E.type == x64_OPR_TYPE_REG) && (E.reg == x64_AX))
+		{
+			x64EncodeAluIToAX(instr, op, I, oprsize);
+			return;
+		}
+		else
+		{
+			instr->opcode[0] = 0x80;
+			instr->imm_len = 1;
+			instr->imm.v8 = I.imm.v8;
+		}
 		break;
 	case TYPE_LEN_DWORD:
 		if(WITHIN32_8BIT(I.imm.v32))
