@@ -14,7 +14,7 @@ int main(int argc, char** argv)
 	}
 	struct stat file_info;
 	fstat(i0_prog_fd, &file_info);
-	__off_t i0_prog = file_info.st_size;
+	__off64_t i0_prog = file_info.st_size;
 	void* mapped_text_seg = mmap(NULL, i0_prog,PROT_READ, MAP_PRIVATE,i0_prog_fd,0);
 	while(1)
 	{
