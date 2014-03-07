@@ -84,6 +84,10 @@ uint32_t i0_opcode4_t::fetch_bits(unsigned len) {
 	return ret;
 }
 
+op_t::op_t() :
+		addrm(-1), ins_offset(-1) {
+}
+
 void insn_t::fill_oper(op_t& op) {
 
 }
@@ -94,8 +98,8 @@ void insn_t::fill_oper(op_t& op, uint8_t attr) {
 
 insn_t::insn_t(i0_ea_type_t _ip)
 try :
-		opnds(NULL), ip(_ip), op_name(I0_ins_last_ins), opt(
-				i0_ins_opt_pref_last), ins_attr(i0_attr_last), size(0) {
+		ip(_ip), op_name(I0_ins_last_ins), opt(i0_ins_opt_pref_last), ins_attr(
+				i0_attr_last), __ins_extra_attr__(i0_attr_last), size(0) {
 	i0_opcode4_t opcode4(*this);
 	uint32_t opcode = opcode4.fetch_bits(I0_INS_BIT_LEN_OPCODE);
 	switch (opcode) {
@@ -169,6 +173,8 @@ try :
 		return;
 	case I0_OPCODE_B: {
 		uint32_t b_opt = opcode4.fetch_bits(I0_INS_BIT_LEN_OPT_B);
+		uint32_t b_ra;
+		op_t* br_target_op = NULL;
 		switch (b_opt) {
 		case I0_OPT_B_IJ:
 			op_name = I0_ins_bij;
@@ -179,9 +185,8 @@ try :
 		case I0_OPT_B_J:
 			op_name = I0_ins_bj;
 			opcode4.load_extra_bytes(I0_INS_LEN_BJ);
-			opt = opcode4.fetch_bits(I0_INS_BIT_LEN_RA);
-			fill_oper_C(Op1);
-			return;
+			br_target_op = &Op1;
+			break;
 		case I0_OPT_B_LE:
 			opt = i0_ins_opt_pref_b_le;
 			break;
@@ -217,23 +222,30 @@ try :
 			cmp_attr = opcode4.fetch_bits(I0_INS_BIT_LEN_ATTR);
 			Op1.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
 			Op2.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
-			opt = opcode4.fetch_bits(I0_INS_BIT_LEN_RA);
 			fill_oper(Op1);
 			fill_oper(Op2);
-			fill_oper_C(Op3);
-			return;
+			br_target_op = &Op3;
+			break;
 		case I0_OPT_B_Z:
 		case I0_OPT_B_NZ:
 			op_name = I0_ins_bcz;
 			opcode4.load_extra_bytes(I0_INS_LEN_BZNZ);
 			cmp_attr = opcode4.fetch_bits(I0_INS_BIT_LEN_ATTR);
 			Op1.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
-			opt = opcode4.fetch_bits(I0_INS_BIT_LEN_RA);
 			fill_oper(Op1);
-			fill_oper_C(Op2);
+			br_target_op = &Op2;
 			return;
 		default:
 			throw(int(0));
+		}
+		b_ra = opcode4.fetch_bits(I0_INS_BIT_LEN_RA);
+		if(b_ra == I0_OPT_JUMP_R)
+		{
+			fill_oper_C(*br_target_op, true);
+		}
+		else
+		{
+			fill_oper_C(*br_target_op, false);
 		}
 	}
 		return;
@@ -244,15 +256,14 @@ try :
 	case I0_OPCODE_INT:
 		op_name = I0_ins_int;
 		opcode4.load_extra_bytes(I0_OPCODE_INT);
-		Op1.addrm=I0_ADDRM_IMMEDIATE;
+		Op1.addrm = I0_ADDRM_IMMEDIATE;
 		fill_oper(Op1, I0_ATTR_UB);
 		return;
 	case I0_OPCODE_SHIFT:
 		opcode4.load_extra_bytes(I0_INS_LEN_SHIFT);
 		opt = opcode4.fetch_bits(I0_INS_BIT_LEN_OPT_SHIFT);
 		// currently other 2 options not implemented
-		switch(opt)
-		{
+		switch (opt) {
 		case I0_OPT_SHIFT_L:
 			op_name = I0_ins_shl;
 			break;

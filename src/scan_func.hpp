@@ -101,6 +101,7 @@ struct op_mem_desp{
 };
 
 struct op_t {
+	op_t();
 	//uint8_t attr;
 	uint8_t addrm;
 	uint8_t ins_offset;
@@ -151,7 +152,7 @@ private:
 	void fill_oper(op_t& op,uint8_t attr);
 	void fill_oper_M(op_t&);
 	void fill_oper_M(op_t& op, uint8_t attr);
-	void fill_oper_C(op_t& op);
+	void fill_oper_C(op_t& op, bool is_rel);
 	void fill_oper_C_indir(op_t& op);
 	uint8_t i0_fetch_byte();
 	uint16_t i0_fetch_word();
