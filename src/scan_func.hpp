@@ -120,7 +120,7 @@ struct op_t {
 	};*/
 };
 
-static_assert((sizeof(op_t) == (1+1+1+1+4+8)), "check op_t size");
+static_assert((sizeof(op_t) == (1+1)), "check op_t size");
 
 class insn_t;
 class i0_opcode4_t {
