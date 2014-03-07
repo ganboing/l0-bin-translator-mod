@@ -239,12 +239,9 @@ try :
 			throw(int(0));
 		}
 		b_ra = opcode4.fetch_bits(I0_INS_BIT_LEN_RA);
-		if(b_ra == I0_OPT_JUMP_R)
-		{
+		if (b_ra == I0_OPT_JUMP_R) {
 			fill_oper_C(*br_target_op, true);
-		}
-		else
-		{
+		} else {
 			fill_oper_C(*br_target_op, false);
 		}
 	}
@@ -261,17 +258,19 @@ try :
 		return;
 	case I0_OPCODE_SHIFT:
 		opcode4.load_extra_bytes(I0_INS_LEN_SHIFT);
-		opt = opcode4.fetch_bits(I0_INS_BIT_LEN_OPT_SHIFT);
-		// currently other 2 options not implemented
-		switch (opt) {
-		case I0_OPT_SHIFT_L:
-			op_name = I0_ins_shl;
-			break;
-		case I0_OPT_SHIFT_R:
-			op_name = I0_ins_shr;
-			break;
-		default:
-			throw(int(I0_DECODE_STATUS_SHRL_OPT));
+		{
+			uint32_t shrl_op = opcode4.fetch_bits(I0_INS_BIT_LEN_OPT_SHIFT);
+			// currently other 2 options not implemented
+			switch (shrl_op) {
+			case I0_OPT_SHIFT_L:
+				op_name = I0_ins_shl;
+				break;
+			case I0_OPT_SHIFT_R:
+				op_name = I0_ins_shr;
+				break;
+			default:
+				throw(int(I0_DECODE_STATUS_SHRL_OPT));
+			}
 		}
 		ins_attr = opcode4.fetch_bits(I0_INS_BIT_LEN_ATTR);
 		Op1.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
