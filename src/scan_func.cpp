@@ -99,7 +99,8 @@ void insn_t::fill_oper(op_t& op, uint8_t attr) {
 insn_t::insn_t(i0_ea_type_t _ip)
 try :
 		ip(_ip), op_name(I0_ins_last_ins), opt(i0_ins_opt_pref_last), ins_attr(
-				i0_attr_last), __ins_extra_attr__(i0_attr_last), size(0) {
+				i0_attr_last), __ins_extra_attr__(i0_attr_last), size(0), br_type(
+				I0_INS_BR_TYPE_FLOW_NXT) {
 	i0_opcode4_t opcode4(*this);
 	uint32_t opcode = opcode4.fetch_bits(I0_INS_BIT_LEN_OPCODE);
 	switch (opcode) {
@@ -152,6 +153,7 @@ try :
 		return;
 	case I0_OPCODE_EXIT:
 		op_name = I0_ins_exit;
+		br_type = I0_INS_BR_TYPE_STOP;
 		opcode4.load_extra_bytes(I0_INS_LEN_EXIT);
 		{
 			uint32_t exit_opt = opcode4.fetch_bits(I0_INS_BIT_LEN_OPT_EXIT);
@@ -175,6 +177,7 @@ try :
 		uint32_t b_opt = opcode4.fetch_bits(I0_INS_BIT_LEN_OPT_B);
 		uint32_t b_ra;
 		op_t* br_target_op = NULL;
+		br_type = I0_INS_BR_TYPE_JMP;
 		switch (b_opt) {
 		case I0_OPT_B_IJ:
 			op_name = I0_ins_bij;
@@ -218,6 +221,7 @@ try :
 		case I0_OPT_B_NE:
 		case I0_OPT_B_SL:
 			op_name = I0_ins_bcc;
+			br_type = I0_INS_BR_TYPE_JCC;
 			opcode4.load_extra_bytes(I0_INS_LEN_BCMP);
 			cmp_attr = opcode4.fetch_bits(I0_INS_BIT_LEN_ATTR);
 			Op1.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
@@ -229,6 +233,7 @@ try :
 		case I0_OPT_B_Z:
 		case I0_OPT_B_NZ:
 			op_name = I0_ins_bcz;
+			br_type = I0_INS_BR_TYPE_JCC;
 			opcode4.load_extra_bytes(I0_INS_LEN_BZNZ);
 			cmp_attr = opcode4.fetch_bits(I0_INS_BIT_LEN_ATTR);
 			Op1.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
@@ -240,10 +245,9 @@ try :
 		}
 		b_ra = opcode4.fetch_bits(I0_INS_BIT_LEN_RA);
 		if (b_ra == I0_OPT_JUMP_R) {
-			fill_oper_C(*br_target_op, true);
-		} else {
-			fill_oper_C(*br_target_op, false);
+			br_type |= I0_INS_BR_R;
 		}
+		fill_oper_C(*br_target_op);
 	}
 		return;
 	case I0_OPCODE_NOP:

@@ -95,7 +95,7 @@ enum I0_regs {
 	i0_reg_I0_regs_last
 };
 
-struct op_mem_desp{
+struct op_mem_desp {
 	int32_t displ;
 	i0_ea_type_t addr;
 };
@@ -106,19 +106,19 @@ struct op_t {
 	uint8_t addrm;
 	uint8_t ins_offset;
 	/*bool code_ref;
-	int32_t displ;
-	union {
-		i0_ea_type_t addr;
-		uint8_t reg;
-		uint64_t val_ue;
-		int64_t val_se;
-		uint32_t val_uf;
-		int32_t val_sf;
-		uint8_t val_ub;
-		int8_t val_sb;
-		float val_fs;
-		double val_fd;
-	};*/
+	 int32_t displ;
+	 union {
+	 i0_ea_type_t addr;
+	 uint8_t reg;
+	 uint64_t val_ue;
+	 int64_t val_se;
+	 uint32_t val_uf;
+	 int32_t val_sf;
+	 uint8_t val_ub;
+	 int8_t val_sb;
+	 float val_fs;
+	 double val_fd;
+	 };*/
 };
 
 static_assert((sizeof(op_t) == (1+1)), "check op_t size");
@@ -149,10 +149,10 @@ public:
 private:
 	insn_t();
 	void fill_oper(op_t&);
-	void fill_oper(op_t& op,uint8_t attr);
+	void fill_oper(op_t& op, uint8_t attr);
 	void fill_oper_M(op_t&);
 	void fill_oper_M(op_t& op, uint8_t attr);
-	void fill_oper_C(op_t& op, bool is_rel);
+	void fill_oper_C(op_t& op);
 	void fill_oper_C_indir(op_t& op);
 	uint8_t i0_fetch_byte();
 	uint16_t i0_fetch_word();
@@ -176,6 +176,7 @@ private:
 		uint8_t dest_attr;
 	};
 	uint8_t size;
+	uint8_t br_type;
 	friend class i0_opcode4_t;
 };
 
@@ -254,5 +255,20 @@ private:
 #define I0_ATTR_UF					(0x07U)
 #define I0_ATTR_FS					(0x08U)
 #define I0_ATTR_FD					(0x09U)
+
+#define I0_INS_BR_TYPE_MASK				(0x03U)
+	#define I0_INS_BR_TYPE_FLOW_NXT			(0x00U)
+	#define I0_INS_BR_TYPE_STOP				(0x01U)
+	#define I0_INS_BR_TYPE_JCC				(0x02U)
+	#define I0_INS_BR_TYPE_JMP				(0x03U)
+#define I0_INS_BR_TARGET_TYPE_MASK		(0x04U)
+	#define I0_INS_BR_TARGET_DETERMINE		(0x00U)
+	#define I0_INS_BR_TARGET_UNDETERMINE	(0x04U)
+#define I0_INS_BR_RA_MASK				(0x10U)
+	#define I0_INS_BR_R						(0x10U)
+	#define I0_INS_BR_A						(0x00U)
+#define I0_INS_BR_RET_MASK				(0x20U)
+	#define I0_INS_BR_RET					(0x20U)
+	#define I0_INS_BR_M						(0x00U)
 
 #endif
