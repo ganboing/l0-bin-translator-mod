@@ -9,7 +9,11 @@ typedef uint64_t i0_val_type_t;
 #define I0_DECODE_STATUS_B_OPT 				(1U)
 #define I0_DECODE_STATUS_SHRL_OPT 			(2U)
 #define I0_DECODE_STATUS_OPCODE				(3U)
+#define I0_DECODE_STATUS_ADDRM				(4U)
+#define I0_DECODE_STATUS_ATTR				(5U)
 #define I0_MAX_OPND_NUMBER	5
+
+#pragma pack(push, 1)
 
 enum I0_ins_options {
 	i0_ins_opt_pref_b_le,
@@ -25,6 +29,8 @@ enum I0_ins_options {
 	i0_ins_opt_pref_exit_ad,
 	i0_ins_opt_pref_last
 };
+
+static_assert((sizeof(I0_ins_options)==1), "");
 
 enum i0_ins_names {
 	I0_ins_conv,
@@ -50,6 +56,8 @@ enum i0_ins_names {
 	I0_ins_mov,
 	I0_ins_last_ins
 };
+
+static_assert((sizeof(i0_ins_names)==1), "");
 
 enum i0_instr_addrm {
 	i0_addrm_Imm = 0,
@@ -94,6 +102,8 @@ enum I0_regs {
 	i0_reg_rr_ID,
 	i0_reg_I0_regs_last
 };
+
+#pragma pack(pop)
 
 struct op_mem_desp {
 	int32_t displ;
@@ -148,20 +158,22 @@ public:
 	~insn_t();
 private:
 	insn_t();
-	void fill_oper(op_t&);
-	void fill_oper(op_t& op, uint8_t attr);
-	void fill_oper_M(op_t&);
-	void fill_oper_M(op_t& op, uint8_t attr);
-	void fill_oper_C(op_t& op);
-	void fill_oper_C_indir(op_t& op);
-	uint8_t i0_fetch_byte();
-	uint16_t i0_fetch_word();
-	uint32_t i0_fetch_dword();
-	uint64_t i0_fetch_qword();
-	void i0_check_byte();
-	void i0_check_word();
-	void i0_check_dword();
-	void i0_check_qword();
+	void check_oper(op_t&);
+	void check_oper(op_t& op, uint8_t attr);
+	void check_oper_M(op_t&);
+	void check_oper_M(op_t& op, uint8_t attr);
+	void check_oper_C(op_t& op);
+	void check_oper_C_indir(op_t& op);
+	uint8_t ins_fetch_byte();
+	uint16_t ins_fetch_word();
+	uint32_t ins_fetch_dword();
+	uint64_t ins_fetch_qword();
+	void ins_check_byte();
+	void ins_check_word();
+	void ins_check_dword();
+	void ins_check_qword();
+	void* i0_op_raw_ptr(op_t& op);
+
 	i0_ea_type_t ip;
 	i0_ins_names op_name;
 	I0_ins_options opt;
@@ -174,8 +186,9 @@ private:
 	union {
 		uint8_t __ins_extra_attr__;
 		uint8_t dest_attr;
+		uint8_t br_opnd;
 	};
-	uint8_t size;
+	uint8_t ins_size;
 	uint8_t br_type;
 	friend class i0_opcode4_t;
 };

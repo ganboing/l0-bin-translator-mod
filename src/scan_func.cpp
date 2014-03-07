@@ -6,12 +6,15 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include "scan_func.hpp"
+#include "i0_mem_layout.h"
 
 #define Op1 (opnds[0])
 #define Op2 (opnds[1])
 #define Op3 (opnds[2])
 #define Op4 (opnds[3])
 #define Op5 (opnds[4])
+
+uint64_t i0_prog_size;
 
 unsigned const i0_Ins_Opnd_Cnt[] = { 2, //conv
 		3, //add
@@ -69,9 +72,9 @@ void i0_opcode4_t::load_extra_bytes(uint8_t cnt) {
 }
 
 void i0_opcode4_t::load_bytes(uint8_t cnt) {
-	uint8_t load_cnt = insn_ref.size + cnt;
+	uint8_t load_cnt = insn_ref.ins_size + cnt;
 	while (cnt) {
-		opcode4.b[3 - load_cnt + cnt] = insn_ref.i0_fetch_byte();
+		opcode4.b[3 - load_cnt + cnt] = insn_ref.ins_fetch_byte();
 		--cnt;
 	}
 }
@@ -88,19 +91,83 @@ op_t::op_t() :
 		addrm(-1), ins_offset(-1) {
 }
 
-void insn_t::fill_oper(op_t& op) {
-
+void insn_t::check_oper(op_t& op) {
+	check_oper(op, ins_attr);
 }
 
-void insn_t::fill_oper(op_t& op, uint8_t attr) {
+static uint8_t i0_imm_bytelen[] = { 1, 8, 16, 4, 1, 8, 16, 4, 4, 8, -1, -1, -1,
+		-1, -1, -1, };
+static_assert((qnumber(i0_imm_bytelen) == (1<<I0_INS_BIT_LEN_ATTR)), "");
 
+void insn_t::check_oper_C(op_t& op) {
+	br_opnd = (&op - opnds);
+	op.addrm = I0_ADDRM_IMMEDIATE;
+	check_oper(op, I0_ATTR_UE);
+}
+
+void insn_t::check_oper_C_indir(op_t& op) {
+	br_opnd = (&op - opnds);
+	br_type |= I0_INS_BR_TARGET_UNDETERMINE;
+	check_oper_M(op, I0_ATTR_UE);
+	if (op.addrm == I0_ADDRM_INDIRECT) {
+		if((*(uint64_t*)i0_op_raw_ptr(op)) == I0_STACK_POINTER)
+		{
+			br_type |= I0_INS_BR_RET;
+		}
+	}
+}
+
+void insn_t::check_oper(op_t& op, uint8_t attr) {
+	op.ins_offset = ins_size;
+	switch (op.addrm) {
+	case I0_ADDRM_IMMEDIATE:
+		switch (i0_imm_bytelen[attr]) {
+		case 1:
+			ins_check_byte();
+			break;
+		case 4:
+			ins_check_dword();
+			break;
+		case 8:
+			ins_check_qword();
+			break;
+		default:
+			throw(int(I0_DECODE_STATUS_ATTR));
+		}
+		break;
+	case I0_ADDRM_DISPLACEMENT:
+		ins_check_dword();
+	case I0_ADDRM_ABSOLUTE:
+	case I0_ADDRM_INDIRECT:
+		ins_check_qword();
+		break;
+	default:
+		throw(int(I0_DECODE_STATUS_ADDRM));
+	}
+}
+
+void insn_t::check_oper_M(op_t& op) {
+	check_oper_M(op, ins_attr);
+}
+
+void insn_t::check_oper_M(op_t& op, uint8_t attr) {
+	if (op.addrm == I0_ADDRM_IMMEDIATE) {
+		throw(int(I0_DECODE_STATUS_ADDRM));
+	}
+	check_oper(op, attr);
+}
+
+void* insn_t::i0_op_raw_ptr(op_t& op) {
+	uint8_t* p = (uint8_t*) ip;
+	p += op.ins_offset;
+	return (void*) p;
 }
 
 insn_t::insn_t(i0_ea_type_t _ip)
 try :
 		ip(_ip), op_name(I0_ins_last_ins), opt(i0_ins_opt_pref_last), ins_attr(
-				i0_attr_last), __ins_extra_attr__(i0_attr_last), size(0), br_type(
-				I0_INS_BR_TYPE_FLOW_NXT) {
+				i0_attr_last), __ins_extra_attr__(i0_attr_last), ins_size(0), br_type(
+		I0_INS_BR_TYPE_FLOW_NXT) {
 	i0_opcode4_t opcode4(*this);
 	uint32_t opcode = opcode4.fetch_bits(I0_INS_BIT_LEN_OPCODE);
 	switch (opcode) {
@@ -115,8 +182,8 @@ try :
 		}
 		Op1.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
 		Op2.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
-		fill_oper(Op1, src_attr);
-		fill_oper_M(Op2, dest_attr);
+		check_oper(Op1, src_attr);
+		check_oper_M(Op2, dest_attr);
 		return;
 	case I0_OPCODE_ADD:
 		op_name = I0_ins_add;
@@ -146,10 +213,10 @@ try :
 		Op2.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
 		Op3.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
 		Op4.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
-		fill_oper_M(Op1);
-		fill_oper_M(Op2);
-		fill_oper_M(Op3);
-		fill_oper_M(Op4);
+		check_oper_M(Op1);
+		check_oper_M(Op2);
+		check_oper_M(Op3);
+		check_oper_M(Op4);
 		return;
 	case I0_OPCODE_EXIT:
 		op_name = I0_ins_exit;
@@ -181,12 +248,14 @@ try :
 		switch (b_opt) {
 		case I0_OPT_B_IJ:
 			op_name = I0_ins_bij;
+			br_opnd = 0;
 			opcode4.load_extra_bytes(I0_INS_LEN_BIJ);
 			Op1.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
-			fill_oper_C_indir(Op1);
+			check_oper_C_indir(Op1);
 			return;
 		case I0_OPT_B_J:
 			op_name = I0_ins_bj;
+			br_opnd = 0;
 			opcode4.load_extra_bytes(I0_INS_LEN_BJ);
 			br_target_op = &Op1;
 			break;
@@ -221,23 +290,25 @@ try :
 		case I0_OPT_B_NE:
 		case I0_OPT_B_SL:
 			op_name = I0_ins_bcc;
+			br_opnd = 2;
 			br_type = I0_INS_BR_TYPE_JCC;
 			opcode4.load_extra_bytes(I0_INS_LEN_BCMP);
 			cmp_attr = opcode4.fetch_bits(I0_INS_BIT_LEN_ATTR);
 			Op1.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
 			Op2.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
-			fill_oper(Op1);
-			fill_oper(Op2);
+			check_oper(Op1);
+			check_oper(Op2);
 			br_target_op = &Op3;
 			break;
 		case I0_OPT_B_Z:
 		case I0_OPT_B_NZ:
 			op_name = I0_ins_bcz;
+			br_opnd = 1;
 			br_type = I0_INS_BR_TYPE_JCC;
 			opcode4.load_extra_bytes(I0_INS_LEN_BZNZ);
 			cmp_attr = opcode4.fetch_bits(I0_INS_BIT_LEN_ATTR);
 			Op1.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
-			fill_oper(Op1);
+			check_oper(Op1);
 			br_target_op = &Op2;
 			return;
 		default:
@@ -247,7 +318,7 @@ try :
 		if (b_ra == I0_OPT_JUMP_R) {
 			br_type |= I0_INS_BR_R;
 		}
-		fill_oper_C(*br_target_op);
+		check_oper_C(*br_target_op);
 	}
 		return;
 	case I0_OPCODE_NOP:
@@ -258,7 +329,7 @@ try :
 		op_name = I0_ins_int;
 		opcode4.load_extra_bytes(I0_OPCODE_INT);
 		Op1.addrm = I0_ADDRM_IMMEDIATE;
-		fill_oper(Op1, I0_ATTR_UB);
+		check_oper(Op1, I0_ATTR_UB);
 		return;
 	case I0_OPCODE_SHIFT:
 		opcode4.load_extra_bytes(I0_INS_LEN_SHIFT);
@@ -280,9 +351,9 @@ try :
 		Op1.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
 		Op2.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
 		Op3.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
-		fill_oper(Op1);
-		fill_oper(Op2);
-		fill_oper_M(Op3);
+		check_oper(Op1);
+		check_oper(Op2);
+		check_oper_M(Op3);
 		return;
 	case I0_OPCODE_SCMP:
 		op_name = I0_ins_scmp;
@@ -293,11 +364,11 @@ try :
 		Op4.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
 		Op5.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
 		ins_attr = I0_ATTR_UE;
-		fill_oper_M(Op1);
-		fill_oper(Op2);
-		fill_oper_M(Op3);
-		fill_oper(Op4);
-		fill_oper_M(Op5);
+		check_oper_M(Op1);
+		check_oper(Op2);
+		check_oper_M(Op3);
+		check_oper(Op4);
+		check_oper_M(Op5);
 		return;
 	default:
 		throw(int(I0_DECODE_STATUS_OPCODE));
@@ -316,9 +387,9 @@ try :
 		Op1.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
 		Op2.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
 		Op3.addrm = opcode4.fetch_bits(I0_INS_BIT_LEN_ADDRM);
-		fill_oper(Op1);
-		fill_oper(Op2);
-		fill_oper_M(Op3);
+		check_oper(Op1);
+		check_oper(Op2);
+		check_oper_M(Op3);
 		return;
 	default:
 		throw(int(0));
@@ -332,25 +403,37 @@ catch (...) {
 insn_t::~insn_t() {
 	delete[] opnds;
 }
-uint8_t insn_t::i0_fetch_byte() {
-	uint8_t ret = i0_get_byte(ip + size);
-	size += sizeof(uint8_t);
+uint8_t insn_t::ins_fetch_byte() {
+	uint8_t ret = i0_get_byte(ip + ins_size);
+	ins_size += sizeof(uint8_t);
 	return ret;
 }
-uint16_t insn_t::i0_fetch_word() {
-	uint16_t ret = i0_get_word(ip + size);
-	size += sizeof(uint16_t);
+void insn_t::ins_check_byte(){
+	ins_fetch_byte();
+}
+uint16_t insn_t::ins_fetch_word() {
+	uint16_t ret = i0_get_word(ip + ins_size);
+	ins_size += sizeof(uint16_t);
 	return ret;
 }
-uint32_t insn_t::i0_fetch_dword() {
-	uint32_t ret = i0_get_dword(ip + size);
-	size += sizeof(uint32_t);
+void insn_t::ins_check_word(){
+	ins_fetch_word();
+}
+uint32_t insn_t::ins_fetch_dword() {
+	uint32_t ret = i0_get_dword(ip + ins_size);
+	ins_size += sizeof(uint32_t);
 	return ret;
 }
-uint64_t insn_t::i0_fetch_qword() {
-	uint64_t ret = i0_get_qword(ip + size);
-	size += sizeof(uint64_t);
+void insn_t::ins_check_dword(){
+	ins_fetch_dword();
+}
+uint64_t insn_t::ins_fetch_qword() {
+	uint64_t ret = i0_get_qword(ip + ins_size);
+	ins_size += sizeof(uint64_t);
 	return ret;
+}
+void insn_t::ins_check_qword(){
+	ins_fetch_qword();
 }
 
 int main(int argc, char** argv) {
@@ -360,8 +443,8 @@ int main(int argc, char** argv) {
 	}
 	struct stat file_info;
 	fstat(i0_prog_fd, &file_info);
-	__off64_t i0_prog = file_info.st_size;
-	void* mapped_text_seg = mmap(NULL, i0_prog, PROT_READ, MAP_PRIVATE,
+	i0_prog_size = file_info.st_size;
+	void* mapped_text_seg = mmap(NULL, i0_prog_size, PROT_READ, MAP_PRIVATE,
 			i0_prog_fd, 0);
 
 	return 0;
