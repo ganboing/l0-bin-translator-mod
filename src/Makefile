@@ -15,4 +15,4 @@ bin-translator:
 	$(CC) $(CFLAGS) $(LDFLAGS) -c bin_translator.c -o bin_translator.o
 
 scan_func: scan_func.cpp
-	$(CXX) $(CXXFLAGS) -o scan_func scan_func.cpp
+	$(CXX) $(CXXFLAGS) -c scan_func.cpp
