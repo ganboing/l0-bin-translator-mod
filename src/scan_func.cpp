@@ -6,7 +6,6 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include "scan_func.hpp"
-#include <boost/shared_ptr.hpp>
 
 #define Op1 (opnds[0])
 #define Op2 (opnds[1])
