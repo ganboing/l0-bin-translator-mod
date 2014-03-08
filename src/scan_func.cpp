@@ -42,20 +42,37 @@ static_assert((qnumber(i0_Ins_Opnd_Cnt) == I0_ins_last_ins), "i0 ins opt number 
 
 //static_assert((sizeof(op_t) == (2+2+4+8)), "check op_t size");
 
+static void i0_check_bound(i0_ea_type_t ea, size_t range)
+{
+	if(ea>= I0_MEMSPACE_PROGLOAD_BASE)
+	{
+		ea-=I0_MEMSPACE_PROGLOAD_BASE;
+		if((ea + range)<=i0_prog_size)
+		{
+			return;
+		}
+	}
+	throw(int(I0_DECODE_STATUS_TEXT_SEGMENT));
+}
+
 static uint8_t i0_get_byte(i0_ea_type_t ea) {
-	return 0;
+	i0_check_bound(ea, sizeof(uint8_t));
+	return *((uint8_t*)ea);
 }
 
 static uint16_t i0_get_word(i0_ea_type_t ea) {
-	return 0;
+	i0_check_bound(ea, sizeof(uint16_t));
+	return *((uint16_t*)ea);
 }
 
 static uint32_t i0_get_dword(i0_ea_type_t ea) {
-	return 0;
+	i0_check_bound(ea, sizeof(uint32_t));
+	return *((uint32_t*)ea);
 }
 
 static uint64_t i0_get_qword(i0_ea_type_t ea) {
-	return 0;
+	i0_check_bound(ea, sizeof(uint64_t));
+	return *((uint64_t*)ea);
 }
 
 i0_opcode4_t::i0_opcode4_t(insn_t& _cmd) :
@@ -110,7 +127,7 @@ void insn_t::check_oper_C_indir(op_t& op) {
 	br_type |= I0_INS_BR_TARGET_UNDETERMINE;
 	check_oper_M(op, I0_ATTR_UE);
 	if (op.addrm == I0_ADDRM_INDIRECT) {
-		if((*(uint64_t*)i0_op_raw_ptr(op)) == I0_STACK_POINTER)
+		if((*(uint64_t*)i0_op_raw_ptr(op)) == I0_MEMSPACE_STACK_POINTER)
 		{
 			br_type |= I0_INS_BR_RET;
 		}
@@ -409,7 +426,7 @@ uint8_t insn_t::ins_fetch_byte() {
 	return ret;
 }
 void insn_t::ins_check_byte(){
-	ins_fetch_byte();
+	i0_check_bound(ip, sizeof(uint8_t));
 }
 uint16_t insn_t::ins_fetch_word() {
 	uint16_t ret = i0_get_word(ip + ins_size);
@@ -417,7 +434,7 @@ uint16_t insn_t::ins_fetch_word() {
 	return ret;
 }
 void insn_t::ins_check_word(){
-	ins_fetch_word();
+	i0_check_bound(ip, sizeof(uint16_t));
 }
 uint32_t insn_t::ins_fetch_dword() {
 	uint32_t ret = i0_get_dword(ip + ins_size);
@@ -425,7 +442,7 @@ uint32_t insn_t::ins_fetch_dword() {
 	return ret;
 }
 void insn_t::ins_check_dword(){
-	ins_fetch_dword();
+	i0_check_bound(ip, sizeof(uint32_t));
 }
 uint64_t insn_t::ins_fetch_qword() {
 	uint64_t ret = i0_get_qword(ip + ins_size);
@@ -433,7 +450,7 @@ uint64_t insn_t::ins_fetch_qword() {
 	return ret;
 }
 void insn_t::ins_check_qword(){
-	ins_fetch_qword();
+	i0_check_bound(ip, sizeof(uint64_t));
 }
 
 int main(int argc, char** argv) {

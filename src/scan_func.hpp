@@ -11,6 +11,7 @@ typedef uint64_t i0_val_type_t;
 #define I0_DECODE_STATUS_OPCODE				(3U)
 #define I0_DECODE_STATUS_ADDRM				(4U)
 #define I0_DECODE_STATUS_ATTR				(5U)
+#define I0_DECODE_STATUS_TEXT_SEGMENT		(6U)
 #define I0_MAX_OPND_NUMBER	5
 
 #pragma pack(push, 1)
